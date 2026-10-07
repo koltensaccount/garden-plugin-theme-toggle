@@ -1,14 +1,46 @@
 {
   "id": "theme-toggle",
-  "name": "Theme Toggle",
+  "name": "Appearance & Reading",
   "version": "1.1.0",
-  "description": "A subtle light/dark toggle pinned below the file browser, using the installed theme's modes.",
+  "description": "Theme-aware light/dark mode, generated accent colors, text size, line spacing and typeface in one compact menu.",
   "author": "Kolten Bendickson",
-  "slots": { "common.footer": "templates/config.njk" },
-  "styles": ["styles/theme-toggle.css"],
-  "scripts": ["assets/theme-toggle.js"],
+  "slots": {
+    "common.footer": "templates/config.njk"
+  },
+  "styles": [
+    "styles/nav-tools.css",
+    "styles/theme-toggle.css"
+  ],
+  "scripts": [
+    "assets/nav-tools.js",
+    "assets/color-options.js",
+    "assets/theme-toggle.js"
+  ],
   "settings": [
-    { "key": "supportedModes", "name": "Theme mode support", "description": "Auto reads the installed theme's CSS. Override for themes that do not declare conventional mode selectors.", "type": "select", "options": ["auto", "both", "light", "dark"], "default": "auto" },
-    { "key": "rememberMode", "name": "Remember visitor mode", "type": "boolean", "default": true }
+    {
+      "key": "supportedModes",
+      "name": "Theme mode support",
+      "description": "Auto reads the installed theme's CSS. Override for themes that do not declare conventional mode selectors.",
+      "type": "select",
+      "options": [
+        "auto",
+        "both",
+        "light",
+        "dark"
+      ],
+      "default": "auto"
+    },
+    {
+      "key": "rememberMode",
+      "name": "Remember visitor mode",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "key": "rememberPreferences",
+      "name": "Remember reading preferences",
+      "type": "boolean",
+      "default": true
+    }
   ]
 }

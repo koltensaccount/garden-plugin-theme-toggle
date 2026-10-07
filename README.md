@@ -1,28 +1,33 @@
-# Theme Toggle for Digital Garden
+# Appearance & Reading
 
-A single subtle light/dark switch at the bottom left of the file browser.
-Uses the installed theme's `theme-light` and `theme-dark` modes and remembers
-each visitor's choice. Navigation scrolls above the pinned button.
+Theme-aware light/dark mode, generated accent colors, text size, line spacing and typeface in one compact menu.
 
-Install this repository URL through Digital Garden's **Install from GitHub**
-menu. Enable/disable and configure the plugin in that same menu. Publish or
-redeploy the garden after changing settings. Requires garden plugin support.
+![Appearance & Reading in a Digital Garden](screenshot.png)
 
-Automatic mode detection inspects the installed theme's stylesheet via CSSOM.
-A theme with only one explicit mode hides the toggle entirely.
-If selectors are missing or
-the stylesheet cannot be inspected, both modes are assumed. Use the **Theme
-mode support** setting to explicitly select `both`, `light`, or `dark` when
-needed. No alternate theme is injected. Without a file browser, no toggle is
-shown. Storage failures are handled without interrupting switching.
+## Installation
 
-No build or dependency installation is required. For local development:
+In Obsidian: Settings > Digital Garden > Plugins > Manage plugins > Browse & install. Until listed in the community gallery, use Install from GitHub with `koltensaccount/garden-plugin-theme-toggle`. A garden with current plugin support is required. Installation is file copying only; no setup scripts or dependencies need to run on the garden. Save settings and let the site rebuild.
 
-```sh
-npm run check
-npm run install:garden -- /path/to/my-digital-garden
-```
+## Usage
 
-The installer preserves existing garden settings. For releases, update both
-version fields and push. Digital Garden prefers the latest GitHub release if
-one exists; otherwise it installs from the default branch.
+The footer icon opens visitor preferences. Single-mode themes hide the mode switch, but reading preferences remain available. Accent variations use relative OKLCH, retain a restrained chroma range and are adjusted to at least 4.5:1 against the primary theme background. Theme preserves the original accent. Older browsers without relative colors keep Theme only. Button text chooses the higher-contrast black/white option. Reading width belongs to Resizable Panes, not this plugin. Preferences are browser-local and can be reset to theme defaults.
+
+## Settings
+
+| Key | Setting | Default |
+| --- | --- | --- |
+| `supportedModes` | Theme mode support | "auto" |
+| `rememberMode` | Remember visitor mode | true |
+| `rememberPreferences` | Remember reading preferences | true |
+
+## Compatibility and Accessibility
+
+Works alone and with the other reading plugins. Shared footer controls use the neutral `dg-nav-tools` convention, with a floating fallback when navigation is absent. Each plugin ships the helper it needs; none imports another plugin. Current Digital Garden uses full-document navigation. Initialization is idempotent. Native controls, accessible labels, focus outlines and appropriate ARIA states are retained. Print styles remain separate from screen preferences. Browser storage failures fall back safely.
+
+## Development
+
+Node 22+; `npm ci`, `npm run check`, `npm test`. Tests use Node's test runner and Playwright's driver with an installed Chrome/Edge browser (`CHROME_PATH` overrides discovery). CI uses Ubuntu's Chrome. Browser tests never invoke an OS print dialog. The plugin files are ready to copy directly into `src/plugins/theme-toggle/` in a current test garden. Real upstream integration and combination checks are reported in `VALIDATION.md`.
+
+## License
+
+MIT, copyright 2026 Kolten Bendickson.
