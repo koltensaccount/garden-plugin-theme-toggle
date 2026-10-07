@@ -9,7 +9,13 @@
 .dg-appearance-dialog fieldset { margin: 18px 0; padding: 0; border: 0; }
 .dg-appearance-dialog legend { margin-bottom: 10px; font-size: 13px; }
 .dg-appearance-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
-.dg-appearance-swatch { width: 28px; height: 28px; padding: 0; border: 2px solid transparent; border-radius: 50%; box-shadow: none; }
+.dg-appearance-swatch { flex: 0 0 28px; width: 28px; height: 28px; min-width: 28px; min-height: 28px; padding: 0; border: 2px solid transparent; border-radius: 50%; box-sizing: border-box; box-shadow: none; }
 .dg-appearance-swatch[aria-pressed="true"], .dg-appearance-swatch:focus-visible { outline: 2px solid var(--text-normal); outline-offset: 3px; }
+.dg-appearance-dialog .dg-appearance-custom { position: relative; justify-content: center; flex: 0 0 28px; width: 28px; height: 28px; margin: 0; padding: 0; gap: 0; border: 2px solid transparent; border-radius: 50%; box-sizing: border-box; overflow: hidden; cursor: pointer; }
+.dg-appearance-custom input[type="color"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: 0; cursor: pointer; }
+.dg-appearance-custom .lucide { width: 14px; height: 14px; pointer-events: none; }
+.dg-appearance-custom :is(.lucide, span) { color: inherit !important; }
+.dg-appearance-custom .lucide + span { display: none; }
+.dg-appearance-custom-selected, .dg-appearance-custom:has(:focus-visible) { outline: 2px solid var(--text-normal); outline-offset: 3px; }
 .dg-appearance-dialog footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 22px; }
 @media print { .dg-appearance-dialog { display: none !important; } }

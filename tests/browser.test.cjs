@@ -37,12 +37,20 @@ test("browser feature, keyboard, repeat initialization and responsive safety", {
       const single = url.searchParams.get("single");
       const dark = '.theme-dark{--background-primary:#151719;--background-secondary:#202428;--text-normal:#f4f4f4;--interactive-accent:#8fbbaa;--text-accent:#8fbbaa;--text-on-accent:#111}';
       const light = '.theme-light{--background-primary:#fafafa;--background-secondary:#eeeeee;--text-normal:#171717;--interactive-accent:#367662;--text-accent:#367662;--text-on-accent:#fff}';
-      res.end(single === 'light' ? light : single === 'dark' ? dark : dark + light);
+      const regression = url.searchParams.get('regression');
+      const orange = regression ? '.theme-dark,.theme-light{--interactive-accent:#ffffff;--text-accent:#ef8a32;--link-color:var(--text-accent)}span{color:white!important}button{background-color:white!important}a{color:var(--link-color)}' : '';
+      const linkOverride = regression === 'link' ? 'a.internal-link{--link-color:#d66b12}' : '';
+      res.end((single === 'light' ? light : single === 'dark' ? dark : dark + light) + orange + linkOverride);
     } else if (/^\/(assets|styles)\//.test(url.pathname)) {
       const file = path.join(root, url.pathname);
       res.setHeader("Content-Type", file.endsWith(".js") ? "text/javascript" : "text/css");
       res.end(fs.readFileSync(file));
-    } else { res.setHeader("Content-Type", "text/html"); res.end(fixture(req.url).replace('/styles/_theme.test.css', '/styles/_theme.test.css?single=' + (url.searchParams.get('single') || ''))); }
+    } else {
+      res.setHeader("Content-Type", "text/html");
+      let html = fixture(req.url).replace('/styles/_theme.test.css', '/styles/_theme.test.css?single=' + (url.searchParams.get('single') || '') + '&regression=' + (url.searchParams.get('regression') || ''));
+      if (url.searchParams.get('regression') === 'link') html = html.replace('href="https://example.com/reference"', 'class="internal-link" href="https://example.com/reference"');
+      res.end(html);
+    }
   });
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -149,6 +157,43 @@ test("browser feature, keyboard, repeat initialization and responsive safety", {
       await page.locator('[name="size"]').fill('24');
       await page.locator('.dg-appearance-reset').click();
       assert.equal(await page.locator('body').evaluate(el => el.style.getPropertyValue('--dg-content-font-size')), '');
+      await page.evaluate(() => localStorage.clear());
+      await page.goto(base + '/?regression=1');
+      await page.locator('#dg-appearance-control').click();
+      assert.equal(await page.locator('.dg-appearance-swatch').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(239, 138, 50)', 'Theme swatch uses orange link accent, not white button accent');
+      assert.equal(await page.locator('.dg-appearance-swatches').evaluate(el => el.lastElementChild.classList.contains('dg-appearance-custom')), true);
+      assert.equal(await page.locator('.dg-appearance-swatches > *').count(), 7);
+      const custom = page.locator('.dg-appearance-custom input');
+      await custom.evaluate(input => {
+        window.customColorInput = input;
+        input.value = '#c95720';
+        input.dispatchEvent(new Event('input', {bubbles:true}));
+      });
+      assert(await custom.evaluate(input => input === window.customColorInput && input.isConnected), 'Live picker input must not be recreated');
+      assert.equal(await page.locator('body').evaluate(el => el.style.getPropertyValue('--text-accent')), '#c95720');
+      assert.equal(await page.locator('.dg-appearance-swatch[aria-pressed="true"]').count(), 0);
+      assert(await page.locator('.dg-appearance-custom-selected').isVisible());
+      await page.reload();
+      await page.locator('#dg-appearance-control').click();
+      assert.equal(await custom.inputValue(), '#c95720');
+      assert.equal(await page.locator('body').evaluate(el => el.style.getPropertyValue('--text-accent')), '#c95720');
+      await page.locator('[role="switch"]').uncheck();
+      assert.equal(await custom.inputValue(), '#c95720');
+      await page.locator('.dg-appearance-reset').click();
+      assert.equal(await page.locator('body').evaluate(el => el.style.getPropertyValue('--text-accent')), '');
+      assert.equal(await custom.inputValue(), '#c95720', 'Reset preserves the saved custom color for reuse');
+      await custom.evaluate(input => {
+        input.addEventListener('click', event => event.preventDefault(), {once:true});
+        input.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true}));
+      });
+      assert.equal(await page.locator('body').evaluate(el => el.style.getPropertyValue('--text-accent')), '#c95720');
+      await page.evaluate(() => localStorage.clear());
+      await page.goto(base + '/?regression=link');
+      await page.locator('#dg-appearance-control').click();
+      assert.equal(await page.locator('.dg-appearance-swatch').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(214, 107, 18)', 'Theme swatch matches actual internal-link color');
+      await page.setViewportSize({width:390,height:844});
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+      assert.deepEqual(errors, []);
     }
     if (id === 'heading-folding') {
       await page.goto(base);

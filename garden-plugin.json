@@ -1,7 +1,7 @@
 {
   "id": "theme-toggle",
   "name": "Appearance & Reading",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Theme-aware light/dark mode, generated accent colors, text size, line spacing and typeface in one compact menu.",
   "author": "Kolten Bendickson",
   "slots": {

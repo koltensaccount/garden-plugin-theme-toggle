@@ -10,7 +10,9 @@ In Obsidian: Settings > Digital Garden > Plugins > Manage plugins > Browse & ins
 
 ## Usage
 
-The footer icon opens visitor preferences. Single-mode themes hide the mode switch, but reading preferences remain available. Accent variations use relative OKLCH, retain a restrained chroma range and are adjusted to at least 4.5:1 against the primary theme background. Theme preserves the original accent. Older browsers without relative colors keep Theme only. Button text chooses the higher-contrast black/white option. Reading width belongs to Resizable Panes, not this plugin. Preferences are browser-local and can be reset to theme defaults.
+The footer icon opens visitor preferences. Single-mode themes hide the mode switch, but reading preferences remain available. The Theme swatch matches the installed theme's link accent rather than its button color. Generated accent variations use relative OKLCH, retain a restrained chroma range and are adjusted to at least 4.5:1 against the primary theme background. Older browsers without relative colors keep Theme and Custom only. Button text chooses the higher-contrast black/white option. Reading width belongs to Resizable Panes, not this plugin. Preferences are browser-local and can be reset to theme defaults.
+
+The last swatch opens the browser's native custom-color picker. Its exact color is saved with browser preferences when remembering preferences is enabled. Theme defaults restores theme styling without forgetting the custom color, so it can be selected again later. Custom colors are not automatically contrast-adjusted.
 
 ## Settings
 

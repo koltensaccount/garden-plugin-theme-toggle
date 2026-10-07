@@ -4,7 +4,7 @@
     if (document.getElementById("dg-appearance-control")) return;
     var config = window.DG_THEME_TOGGLE || {};
     var support = "both";
-    var preference = { size: 0, spacing: 0, font: "Theme", accent: 0 };
+    var preference = { size: 0, spacing: 0, font: "Theme", accent: 0, customColor: null };
     var storageKey = "dgAppearanceReading.preferences";
     try {
       var saved = config.rememberPreferences !== false && JSON.parse(localStorage.getItem(storageKey) || "null");
@@ -12,7 +12,8 @@
         preference.size = Number.isFinite(saved.size) && saved.size >= 12 ? Math.min(26, saved.size) : 0;
         preference.spacing = Number.isFinite(saved.spacing) && saved.spacing >= 1.2 ? Math.min(2, saved.spacing) : 0;
         preference.font = ["Theme", "Sans serif", "Serif"].includes(saved.font) ? saved.font : "Theme";
-        preference.accent = Number.isInteger(saved.accent) ? Math.max(0, Math.min(6, saved.accent)) : 0;
+        preference.customColor = typeof saved.customColor === "string" && /^#[0-9a-f]{6}$/i.test(saved.customColor) ? saved.customColor.toLowerCase() : null;
+        preference.accent = saved.accent === "custom" && preference.customColor ? "custom" : Number.isInteger(saved.accent) ? Math.max(0, Math.min(6, saved.accent)) : 0;
       }
     } catch (_) {}
     var colorsManaged = ["--interactive-accent", "--interactive-accent-hover", "--text-accent", "--text-accent-hover", "--link-color", "--link-color-hover", "--text-on-accent"];
@@ -35,15 +36,23 @@
     var size = dialog.querySelector('[name="size"]');
     var spacing = dialog.querySelector('[name="spacing"]');
     var font = dialog.querySelector('[name="font"]');
+    var customSwatch = document.createElement("label");
+    customSwatch.className = "dg-appearance-custom";
+    customSwatch.innerHTML = '<i data-lucide="pipette"></i><span aria-hidden="true">+</span><input type="color" aria-label="Custom accent color">';
+    var customInput = customSwatch.querySelector("input");
     function resetVariable(key) { var value = original.get(key); if (value) document.body.style.setProperty(key, value); else document.body.style.removeProperty(key); }
     function resolved(variable, fallback) {
       var probe = document.createElement("span");
-      probe.style.color = "var(" + variable + ", " + fallback + ")";
+      probe.style.setProperty("color", "var(" + variable + ", " + fallback + ")", "important");
       probe.hidden = true;
       document.body.appendChild(probe);
       var color = getComputedStyle(probe).color;
       probe.remove();
       return color;
+    }
+    function themeAccent() {
+      var link = content && content.querySelector("a.internal-link");
+      return link ? getComputedStyle(link).color : resolved("--link-color", "var(--text-accent, var(--color-accent, var(--interactive-accent, #777)))");
     }
     function detectSupport() {
       if (["both", "light", "dark"].includes(config.supportedModes)) return config.supportedModes;
@@ -59,28 +68,39 @@
       return modes.size === 1 ? Array.from(modes)[0] : "both";
     }
     function save() { if (config.rememberPreferences !== false) try { localStorage.setItem(storageKey, JSON.stringify(preference)); } catch (_) {} }
-    function apply() {
+    function apply(preserveSwatches) {
       colorsManaged.forEach(resetVariable);
-      var colors = window.DGAppearanceColors.generate(resolved("--interactive-accent", "#777"), resolved("--background-primary", "white"));
+      var colors = window.DGAppearanceColors.generate(themeAccent(), resolved("--background-primary", "white")).slice(0, 6);
       if (preference.accent >= colors.length) preference.accent = 0;
-      var selected = colors[preference.accent];
+      var customColor = preference.customColor || colors[0].color;
+      var selected = preference.accent === "custom" ? { color: customColor } : colors[preference.accent];
       if (preference.accent) {
         colorsManaged.slice(0, 6).forEach(function (key) { document.body.style.setProperty(key, selected.color); });
         document.body.style.setProperty("--text-on-accent", window.DGAppearanceColors.contrast(selected.color, "white") >= window.DGAppearanceColors.contrast(selected.color, "black") ? "white" : "black");
       }
       var swatches = dialog.querySelector(".dg-appearance-swatches");
-      swatches.replaceChildren();
-      colors.forEach(function (color, index) {
-        var swatch = document.createElement("button");
-        swatch.type = "button";
-        swatch.className = "dg-appearance-swatch";
-        swatch.style.backgroundColor = color.color;
-        swatch.title = color.label;
-        swatch.setAttribute("aria-label", color.label + " accent");
-        swatch.setAttribute("aria-pressed", String(index === preference.accent));
-        swatch.addEventListener("click", function () { preference.accent = index; apply(); save(); dialog.querySelectorAll(".dg-appearance-swatch")[index].focus(); });
-        swatches.appendChild(swatch);
-      });
+      if (!preserveSwatches) {
+        swatches.replaceChildren();
+        colors.forEach(function (color, index) {
+          var swatch = document.createElement("button");
+          swatch.type = "button";
+          swatch.className = "dg-appearance-swatch";
+          swatch.style.setProperty("background-color", color.color, "important");
+          swatch.title = color.label;
+          swatch.setAttribute("aria-label", color.label + " accent");
+          swatch.setAttribute("aria-pressed", String(index === preference.accent));
+          swatch.addEventListener("click", function () { preference.accent = index; apply(); save(); dialog.querySelectorAll(".dg-appearance-swatch")[index].focus(); });
+          swatches.appendChild(swatch);
+        });
+        swatches.appendChild(customSwatch);
+      }
+      swatches.querySelectorAll(".dg-appearance-swatch").forEach(function (swatch, index) { swatch.setAttribute("aria-pressed", String(index === preference.accent)); });
+      customSwatch.style.setProperty("background-color", customColor, "important");
+      customSwatch.style.setProperty("color", window.DGAppearanceColors.contrast(customColor, "white") >= window.DGAppearanceColors.contrast(customColor, "black") ? "white" : "black", "important");
+      customSwatch.classList.toggle("dg-appearance-custom-selected", preference.accent === "custom");
+      customSwatch.title = "Custom accent: " + customColor;
+      customInput.value = customColor;
+      customInput.setAttribute("aria-label", "Custom accent color" + (preference.accent === "custom" ? ", selected" : ""));
       if (preference.size) document.body.style.setProperty("--dg-content-font-size", preference.size + "px"); else resetVariable("--dg-content-font-size");
       if (preference.spacing) document.body.style.setProperty("--dg-content-line-height", preference.spacing); else resetVariable("--dg-content-line-height");
       if (content) content.style.fontFamily = preference.font === "Serif" ? 'Georgia, "Times New Roman", serif' : preference.font === "Sans serif" ? 'system-ui, sans-serif' : originalFont;
@@ -113,7 +133,11 @@
     size.addEventListener("input", function () { preference.size = Number(size.value); apply(); save(); });
     spacing.addEventListener("input", function () { preference.spacing = Number(spacing.value); apply(); save(); });
     font.addEventListener("change", function () { preference.font = font.value; apply(); save(); });
-    dialog.querySelector(".dg-appearance-reset").addEventListener("click", function () { preference = { size: 0, spacing: 0, font: "Theme", accent: 0 }; apply(); save(); });
+    function chooseCustom() { preference.accent = "custom"; preference.customColor = customInput.value; apply(true); save(); }
+    customInput.addEventListener("click", chooseCustom);
+    customInput.addEventListener("input", chooseCustom);
+    customInput.addEventListener("change", chooseCustom);
+    dialog.querySelector(".dg-appearance-reset").addEventListener("click", function () { preference = { size: 0, spacing: 0, font: "Theme", accent: 0, customColor: preference.customColor }; apply(); save(); });
     window.addEventListener("storage", function (event) { if (event.key === "dgThemeToggle.mode" && config.rememberMode !== false && support === "both" && ["light", "dark"].includes(event.newValue)) setMode(event.newValue, false); });
     initialize();
     window.addEventListener("load", initialize, { once: true });

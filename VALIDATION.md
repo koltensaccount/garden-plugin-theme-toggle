@@ -1,6 +1,12 @@
 # Validation
 
-Validated on 2026-10-07, Node 22.23.3 and Microsoft Edge 153 (Playwright).
+Version 1.2.0 validated on 2026-10-07, Node 22.23.3 and Google Chrome 154 (Playwright).
+
+## Accent picker update
+
+`npm run check` and `npm test` passed (1 browser test, none skipped). Regression checks cover orange link accents with white button styling, theme overrides of probe/swatch colors, seven palette slots, a stable native picker during input, custom-color persistence across reload and mode changes, reset behavior, and mobile overflow.
+
+The actual Digital Garden at upstream commit `80a33ffa6cb198ecf733e5944b4a60510970e3b0` built successfully with only Appearance & Reading enabled. Focused browser checks passed at 1600 px and 390 px: the Theme swatch matched the rendered link accent, custom color survived reload, no horizontal overflow or browser errors occurred. Desktop/mobile screenshots were visually reviewed. The OS-native color dialog itself was not automated.
 
 ## Standalone
 
