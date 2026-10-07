@@ -1,7 +1,7 @@
 {
   "id": "theme-toggle",
   "name": "Theme Toggle",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A subtle light/dark toggle pinned below the file browser, using the installed theme's modes.",
   "author": "Kolten Bendickson",
   "slots": { "common.footer": "templates/config.njk" },

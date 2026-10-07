@@ -14,7 +14,10 @@
   flex: 0 0 40px;
   display: flex;
   align-items: flex-end;
+  gap: 4px;
 }
+.dg-theme-nav-footer:not(:has(button:not([hidden]))) { display: none; }
+.dg-theme-toggle[hidden] { display: none !important; }
 .dg-theme-toggle {
   display: inline-flex;
   align-items: center;

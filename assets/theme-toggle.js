@@ -13,14 +13,20 @@
     button.setAttribute("aria-label", "Dark mode");
     button.innerHTML = '<i data-lucide="sun-moon"></i><span aria-hidden="true">&#9680;</span>';
 
-    var scroll = document.createElement("div");
-    scroll.className = "dg-theme-nav-content";
-    while (nav.firstChild) scroll.appendChild(nav.firstChild);
-    nav.appendChild(scroll);
-    var footer = document.createElement("div");
-    footer.className = "dg-theme-nav-footer";
+    var scroll = nav.querySelector(":scope > .dg-theme-nav-content");
+    if (!scroll) {
+      scroll = document.createElement("div");
+      scroll.className = "dg-theme-nav-content";
+      while (nav.firstChild) scroll.appendChild(nav.firstChild);
+      nav.appendChild(scroll);
+    }
+    var footer = nav.querySelector(":scope > .dg-theme-nav-footer");
+    if (!footer) {
+      footer = document.createElement("div");
+      footer.className = "dg-theme-nav-footer";
+      nav.appendChild(footer);
+    }
     footer.appendChild(button);
-    nav.appendChild(footer);
     nav.classList.add("dg-theme-nav");
 
     function detectSupport() {
@@ -45,6 +51,7 @@
     function mode() { return document.body.classList.contains("theme-light") ? "light" : "dark"; }
     function render() {
       button.disabled = support === "light" || support === "dark";
+      button.hidden = button.disabled;
       button.setAttribute("aria-checked", String(mode() === "dark"));
       button.title = button.disabled ? "This theme supports " + support + " mode only" : "Switch to " + (mode() === "dark" ? "light" : "dark") + " mode";
     }

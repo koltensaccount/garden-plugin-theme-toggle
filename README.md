@@ -9,8 +9,8 @@ menu. Enable/disable and configure the plugin in that same menu. Publish or
 redeploy the garden after changing settings. Requires garden plugin support.
 
 Automatic mode detection inspects the installed theme's stylesheet via CSSOM.
-A theme with only one explicit mode keeps the toggle visible but disabled,
-with a tooltip explaining the supported mode. If selectors are missing or
+A theme with only one explicit mode hides the toggle entirely.
+If selectors are missing or
 the stylesheet cannot be inspected, both modes are assumed. Use the **Theme
 mode support** setting to explicitly select `both`, `light`, or `dark` when
 needed. No alternate theme is injected. Without a file browser, no toggle is
