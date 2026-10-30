@@ -1,0 +1,69 @@
+/* Mathematical callout references — compatible with native Obsidian block IDs.
+   The publishing plugin handles resolving links and expanding embeds; these
+   rules affect presentation only and do not modify source content. */
+main.content .callout:is(
+  [data-callout="definition" i], [data-callout="theorem" i],
+  [data-callout="proposition" i], [data-callout="lemma" i],
+  [data-callout="corollary" i], [data-callout="remark" i],
+  [data-callout="axiom" i], [data-callout="conjecture" i],
+  [data-callout="notation" i]
+)[id] {
+  scroll-margin-top: max(96px, calc(var(--dg-sidebar-top, 75px) + 18px));
+}
+
+/* A linked environment gets a restrained outline, not a large colored panel. */
+main.content .callout:is(
+  [data-callout="definition" i], [data-callout="theorem" i],
+  [data-callout="proposition" i], [data-callout="lemma" i],
+  [data-callout="corollary" i], [data-callout="remark" i],
+  [data-callout="axiom" i], [data-callout="conjecture" i],
+  [data-callout="notation" i]
+)[id]:target {
+  outline: 1px solid var(--folio-link, var(--text-accent));
+  outline-offset: 3px;
+  transition: outline-color 160ms ease-out;
+}
+
+/* For a whole-callout transclusion, present the actual callout directly.
+   :has keeps ordinary note/section transclusions entirely unchanged. */
+main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) {
+  position: relative;
+  margin-block: 1em;
+}
+main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed > .markdown-embed-title {
+  display: none;
+}
+main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed > .callout {
+  margin-block: 0 !important;
+}
+
+/* Keep the original-source link accessible without intrusive permanent chrome. */
+main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed-link {
+  position: absolute;
+  inset-block-start: 0.25rem;
+  inset-inline-end: 0.25rem;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+main.content .transclusion.internal-embed:has(> .markdown-embed > .callout):is(:hover, :focus-within) > .markdown-embed-link {
+  opacity: 1;
+}
+@media (hover: none) {
+  main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed-link {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  main.content .callout[id]:target,
+  main.content .transclusion.internal-embed > .markdown-embed-link {
+    transition: none;
+  }
+}
