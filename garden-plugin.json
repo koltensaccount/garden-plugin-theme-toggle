@@ -1,7 +1,7 @@
 {
   "id": "theme-toggle",
   "name": "Appearance & Reading",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Theme-aware reading preferences and automatic high-resolution Easy TikZ graph publishing.",
   "author": "Kolten Bendickson",
   "hooks": "index.js",
@@ -12,6 +12,7 @@
   "styles": [
     "styles/nav-tools.css",
     "styles/theme-toggle.css",
+    "styles/callout-references.css",
     "styles/tikz-graphs.css"
   ],
   "scripts": [
