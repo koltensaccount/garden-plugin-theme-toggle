@@ -18,7 +18,8 @@
   "scripts": [
     "assets/nav-tools.js",
     "assets/color-options.js",
-    "assets/theme-toggle.js"
+    "assets/theme-toggle.js",
+    "assets/callout-references.js"
   ],
   "settings": [
     {

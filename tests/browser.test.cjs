@@ -6,7 +6,23 @@ const http = require("node:http");
 const { chromium } = require("playwright-core");
 const root = path.resolve(__dirname, "..");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "garden-plugin.json")));
-const chrome = process.env.CHROME_PATH || ["/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge", "/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"].find(file => fs.existsSync(file));
+let chrome = process.env.CHROME_PATH;
+if (!chrome) {
+  const candidates = [
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    path.join(process.env.HOME || "", "Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"),
+  ];
+  try {
+    const pw = require("playwright");
+    if (pw?.chromium?.executablePath && fs.existsSync(pw.chromium.executablePath())) {
+      candidates.unshift(pw.chromium.executablePath());
+    }
+  } catch (_) {}
+  chrome = candidates.find(file => fs.existsSync(file));
+}
 const configNames = { "resizable-panes": "DG_RESIZABLE_PANES", "toc-settings": "DG_TOC_SETTINGS", "reading-progress": "DG_READING_PROGRESS", "theme-toggle": "DG_THEME_TOGGLE", "clean-print": "DG_CLEAN_PRINT" };
 
 function fixture(url) {
@@ -35,7 +51,7 @@ test("browser feature, keyboard, repeat initialization and responsive safety", {
     if (url.pathname.startsWith("/styles/_theme.")) {
       res.setHeader("Content-Type", "text/css");
       const single = url.searchParams.get("single");
-      const dark = '.theme-dark{--background-primary:#151719;--background-secondary:#202428;--text-normal:#f4f4f4;--interactive-accent:#8fbbaa;--text-accent:#8fbbaa;--text-on-accent:#111}';
+      const dark = '.theme-dark{--background-primary:#151719;--background-secondary:#202428;--text-normal:#f4f4f4;--interactive-accent:#8fbbaa;--text-accent:#8fbbaa;--text-on-accent:#111}.callout.is-collapsed > .callout-content{display:none}';
       const light = '.theme-light{--background-primary:#fafafa;--background-secondary:#eeeeee;--text-normal:#171717;--interactive-accent:#367662;--text-accent:#367662;--text-on-accent:#fff}';
       const regression = url.searchParams.get('regression');
       const orange = regression ? '.theme-dark,.theme-light{--interactive-accent:#ffffff;--text-accent:#ef8a32;--link-color:var(--text-accent)}span{color:white!important}button{background-color:white!important}a{color:var(--link-color)}' : '';
@@ -196,13 +212,14 @@ test("browser feature, keyboard, repeat initialization and responsive safety", {
 
       // Callout references and synced embeds appearance tests
       await page.evaluate(() => {
+        document.querySelectorAll('dialog[open]').forEach(d => d.close());
         const container = document.querySelector('main.content');
         container.innerHTML = `
           <div class="callout" data-callout="definition" id="def-ring">
             <div class="callout-title"><div class="callout-title-inner">Definition</div></div>
             <div class="callout-content"><p>A ring is a set...</p></div>
           </div>
-          <div class="callout is-collapsed" data-callout="theorem" id="thm-euler">
+          <div class="callout is-collapsible is-collapsed" data-callout="theorem" id="thm-euler">
             <div class="callout-title"><div class="callout-title-inner">Theorem</div><div class="callout-fold"><i class="lucide"></i></div></div>
             <div class="callout-content"><p>e^{i pi} + 1 = 0</p></div>
           </div>
@@ -226,6 +243,11 @@ test("browser feature, keyboard, repeat initialization and responsive safety", {
             </div>
           </div>
         `;
+        document.querySelectorAll('.callout.is-collapsible').forEach(elem => {
+          elem.querySelector('.callout-title')?.addEventListener('click', () => {
+            elem.classList.toggle('is-collapsed');
+          });
+        });
         location.hash = "#thm-euler";
       });
       await page.waitForTimeout(50);
@@ -239,8 +261,16 @@ test("browser feature, keyboard, repeat initialization and responsive safety", {
       const embedBorder = await page.locator('#embed-callout > .markdown-embed').evaluate(el => getComputedStyle(el).borderWidth);
       assert.equal(embedBorder, '0px', 'Whole-callout transclusion removes border');
 
+      const embedSourceLinkDisplay = await page.locator('#embed-callout > .markdown-embed-link').evaluate(el => getComputedStyle(el).display);
+      assert.equal(embedSourceLinkDisplay, 'none', 'Whole-callout embed source link is hidden without chrome');
+
       const embedTitleDisplay = await page.locator('#embed-note > .markdown-embed > .markdown-embed-title').evaluate(el => getComputedStyle(el).display);
       assert.notEqual(embedTitleDisplay, 'none', 'Multi-block note embed title is not hidden');
+
+      // Subsequent folding test: clicking fold control on targeted callout collapses it
+      await page.locator('#thm-euler > .callout-title').click();
+      const reCollapsedContentDisplay = await page.locator('#thm-euler > .callout-content').evaluate(el => getComputedStyle(el).display);
+      assert.equal(reCollapsedContentDisplay, 'none', 'User can collapse a targeted callout after navigating to it');
 
       assert.deepEqual(errors, []);
     }
