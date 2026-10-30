@@ -193,6 +193,55 @@ test("browser feature, keyboard, repeat initialization and responsive safety", {
       assert.equal(await page.locator('.dg-appearance-swatch').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(214, 107, 18)', 'Theme swatch matches actual internal-link color');
       await page.setViewportSize({width:390,height:844});
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+
+      // Callout references and synced embeds appearance tests
+      await page.evaluate(() => {
+        const container = document.querySelector('main.content');
+        container.innerHTML = `
+          <div class="callout" data-callout="definition" id="def-ring">
+            <div class="callout-title"><div class="callout-title-inner">Definition</div></div>
+            <div class="callout-content"><p>A ring is a set...</p></div>
+          </div>
+          <div class="callout is-collapsed" data-callout="theorem" id="thm-euler">
+            <div class="callout-title"><div class="callout-title-inner">Theorem</div><div class="callout-fold"><i class="lucide"></i></div></div>
+            <div class="callout-content"><p>e^{i pi} + 1 = 0</p></div>
+          </div>
+          <div class="transclusion internal-embed is-loaded" id="embed-callout">
+            <a class="markdown-embed-link" href="/notes/algebra#def-ring">source</a>
+            <div class="markdown-embed">
+              <div class="callout" data-callout="definition">
+                <div class="callout-title"><div class="callout-title-inner">Definition</div></div>
+                <div class="callout-content"><p>A ring is a set...</p></div>
+              </div>
+            </div>
+          </div>
+          <div class="transclusion internal-embed is-loaded" id="embed-note">
+            <a class="markdown-embed-link" href="/notes/other">source</a>
+            <div class="markdown-embed">
+              <div class="markdown-embed-title">Note title</div>
+              <p>Regular note paragraph</p>
+              <div class="callout" data-callout="remark">
+                <div class="callout-title"><div class="callout-title-inner">Remark</div></div>
+              </div>
+            </div>
+          </div>
+        `;
+        location.hash = "#thm-euler";
+      });
+      await page.waitForTimeout(50);
+      const calloutScrollMargin = await page.locator('#def-ring').evaluate(el => getComputedStyle(el).scrollMarginTop);
+      assert.match(calloutScrollMargin, /px/);
+      assert(parseFloat(calloutScrollMargin) >= 90, 'scroll-margin-top applies to mathematical callout with id: ' + calloutScrollMargin);
+
+      const collapsedTargetContentDisplay = await page.locator('#thm-euler > .callout-content').evaluate(el => getComputedStyle(el).display);
+      assert.equal(collapsedTargetContentDisplay, 'block', 'Folded callout targeted via anchor expands content');
+
+      const embedBorder = await page.locator('#embed-callout > .markdown-embed').evaluate(el => getComputedStyle(el).borderWidth);
+      assert.equal(embedBorder, '0px', 'Whole-callout transclusion removes border');
+
+      const embedTitleDisplay = await page.locator('#embed-note > .markdown-embed > .markdown-embed-title').evaluate(el => getComputedStyle(el).display);
+      assert.notEqual(embedTitleDisplay, 'none', 'Multi-block note embed title is not hidden');
+
       assert.deepEqual(errors, []);
     }
     if (id === 'heading-folding') {

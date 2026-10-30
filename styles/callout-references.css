@@ -24,28 +24,51 @@ main.content .callout:is(
   transition: outline-color 160ms ease-out;
 }
 
+/* When a collapsed callout is targeted directly by its anchor, make its content visible. */
+main.content .callout.is-collapsed:target > .callout-content {
+  display: block !important;
+}
+main.content .callout.is-collapsed:target .callout-fold :is(.lucide, .svg-icon, svg, i) {
+  transform: rotate(0deg) !important;
+}
+
 /* For a whole-callout transclusion, present the actual callout directly.
    :has keeps ordinary note/section transclusions entirely unchanged. */
-main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) {
+main.content .transclusion.internal-embed:is(
+  :has(> .markdown-embed > .callout:only-child),
+  :has(> .markdown-embed > .markdown-embed-title + .callout:last-child)
+) {
   position: relative;
   margin-block: 1em;
 }
-main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed {
+main.content .transclusion.internal-embed:is(
+  :has(> .markdown-embed > .callout:only-child),
+  :has(> .markdown-embed > .markdown-embed-title + .callout:last-child)
+) > .markdown-embed {
   border: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
   padding: 0 !important;
   margin: 0 !important;
 }
-main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed > .markdown-embed-title {
+main.content .transclusion.internal-embed:is(
+  :has(> .markdown-embed > .callout:only-child),
+  :has(> .markdown-embed > .markdown-embed-title + .callout:last-child)
+) > .markdown-embed > .markdown-embed-title {
   display: none;
 }
-main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed > .callout {
+main.content .transclusion.internal-embed:is(
+  :has(> .markdown-embed > .callout:only-child),
+  :has(> .markdown-embed > .markdown-embed-title + .callout:last-child)
+) > .markdown-embed > .callout {
   margin-block: 0 !important;
 }
 
 /* Keep the original-source link accessible without intrusive permanent chrome. */
-main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed-link {
+main.content .transclusion.internal-embed:is(
+  :has(> .markdown-embed > .callout:only-child),
+  :has(> .markdown-embed > .markdown-embed-title + .callout:last-child)
+) > .markdown-embed-link {
   position: absolute;
   inset-block-start: 0.25rem;
   inset-inline-end: 0.25rem;
@@ -53,11 +76,17 @@ main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .m
   opacity: 0;
   transition: opacity 160ms ease;
 }
-main.content .transclusion.internal-embed:has(> .markdown-embed > .callout):is(:hover, :focus-within) > .markdown-embed-link {
+main.content .transclusion.internal-embed:is(
+  :has(> .markdown-embed > .callout:only-child),
+  :has(> .markdown-embed > .markdown-embed-title + .callout:last-child)
+):is(:hover, :focus-within) > .markdown-embed-link {
   opacity: 1;
 }
 @media (hover: none) {
-  main.content .transclusion.internal-embed:has(> .markdown-embed > .callout) > .markdown-embed-link {
+  main.content .transclusion.internal-embed:is(
+    :has(> .markdown-embed > .callout:only-child),
+    :has(> .markdown-embed > .markdown-embed-title + .callout:last-child)
+  ) > .markdown-embed-link {
     opacity: 1;
   }
 }
