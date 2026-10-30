@@ -1,0 +1,27 @@
+const { mathjax } = require('mathjax-full/js/mathjax.js');
+const { TeX } = require('mathjax-full/js/input/tex.js');
+const { SVG } = require('mathjax-full/js/output/svg.js');
+const { liteAdaptor } = require('mathjax-full/js/adaptors/liteAdaptor.js');
+const { RegisterHTMLHandler } = require('mathjax-full/js/handlers/html.js');
+const { AllPackages } = require('mathjax-full/js/input/tex/AllPackages.js');
+const { activeDocument } = require('./tikz-dom');
+const adaptor = liteAdaptor();
+RegisterHTMLHandler(adaptor);
+const engine = mathjax.document('', { InputJax: new TeX({packages: AllPackages.filter(p => !['html','autoload','require','noundefined'].includes(p))}), OutputJax: new SVG({fontCache:'none'}) });
+const upstream = require(process.env.EASY_TIKZ_SOURCE + '/src/mathcontext.ts');
+exports.extractMathSource = upstream.labelMathSource;
+exports.flushMathRenders = () => Promise.resolve(false);
+exports.MATH_REDRAW_LIMIT = 0;
+exports.renderMathLabel = function (source, color, fontSize) {
+  const html = adaptor.outerHTML(engine.convert(source, {display:false}));
+  if (/data-mjx-error|data-mml-node="merror"/.test(html)) throw new Error('Invalid chart math label');
+  const el = activeDocument.createElement('div');
+  el.innerHTML = html;
+  const svg = el.querySelector('svg');
+  const box = svg.getAttribute('viewBox').split(/\s+/).map(Number);
+  const width = parseFloat(svg.getAttribute('width')) * fontSize / 2;
+  const height = parseFloat(svg.getAttribute('height')) * fontSize / 2;
+  svg.setAttribute('width', width); svg.setAttribute('height', height);
+  svg.setAttribute('color', color);
+  return {el, width, height};
+};

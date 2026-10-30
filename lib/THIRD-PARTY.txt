@@ -1,0 +1,21 @@
+Easy TikZ 4.6.0 renderer, parser, scene and math engine
+Copyright Saiki77. MIT; see EASY-TIKZ-LICENSE.txt.
+Source: https://github.com/Saiki77/easy-tikz
+Pinned commit: 51c6a7c2b86d0a5b439191e0511518ea22b203bc
+Adaptations: a headless DOM, SVG MathJax labels, deterministic light/dark
+palettes and PNG export, in build/tikz-*.js. No Obsidian UI is included.
+
+MathJax 3.2.2, Apache-2.0, MathJax Consortium.
+https://github.com/mathjax/MathJax-src
+linkedom 0.18.12, ISC, Andrea Giammarchi.
+https://github.com/WebReflection/linkedom
+resvg-js/resvg-wasm 2.6.2, MPL-2.0, Brooooooklyn and contributors.
+https://github.com/thx/resvg-js
+resvg/usvg/tiny-skia and their Rust dependencies retain upstream licenses.
+https://github.com/linebender/resvg
+Noto Sans Regular, SIL Open Font License 1.1; see NOTO-LICENSE.txt.
+https://github.com/notofonts/noto-fonts
+
+Additional bundled JavaScript copyright and license notices are preserved
+in easy-tikz-renderer.cjs.LEGAL.txt. Build dependencies are not installed
+or executed by gardens; lib/ contains the prebuilt runtime.

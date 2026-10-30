@@ -1,0 +1,121 @@
+diff --git a/main.ts b/main.ts
+index ff1a8f3..5e0eaf9 100644
+--- a/main.ts
++++ b/main.ts
+@@ -20,6 +20,7 @@ import { VaultChartHost } from './src/ai/vaultHost';
+ import { AI_APPS, agentsSection, mcpUrl, mergeAgentsSection, newToken, shownSnippet } from './src/ai/connect';
+ import AI_GUIDE from './docs/ai.md';
+ import { BlockFormat, readBlock } from './src/blockjson';
++import { replaceChartBlock } from './src/text/replaceBlock';
+ import { TextProblem } from './src/text/parse';
+ import { printChartText, writeChartText } from './src/text/print';
+ import { GLIDE_MS, PopIn, PopInState, drawnNames, ease, glides, mixCharts, reducedMotion } from './src/motion';
+@@ -807,9 +808,9 @@ export default class EasyTikzPlugin extends Plugin implements PluginHost {
+         try {
+             await this.app.vault.process(file, (content) => {
+                 // Index arithmetic, not String.replace: '$$' or "$'" in a label would be read as a replacement pattern.
+-                const at = content.indexOf(original);
+-                found = at >= 0;
+-                return at < 0 ? content : content.slice(0, at) + updated + content.slice(at + original.length);
++                const result = replaceChartBlock(content, original, updated);
++                found = result !== null;
++                return result === null ? content : result;
+             });
+         } catch (e) {
+             new Notice(`Could not save the chart width or alignment: ${errorText(e)}`);
+diff --git a/src/modal.ts b/src/modal.ts
+index d0001b4..1a725bd 100644
+--- a/src/modal.ts
++++ b/src/modal.ts
+@@ -15,6 +15,7 @@ import type { ChartDraft } from './templates';
+ import type { BlockFormat } from './blockjson';
+ import { isChartText } from './text/parse';
+ import { printChartText, writeChartText } from './text/print';
++import { replaceChartBlock } from './text/replaceBlock';
+ import { PopIn, drawnNames, reducedMotion } from './motion';
+ import { FieldHandle, PanelHost, PluginHost } from './ui/host';
+ import type {
+@@ -3491,19 +3492,17 @@ export class TikzModal extends Modal implements PanelHost {
+             let found = false;
+             try {
+                 await this.app.vault.process(file, (content) => {
+-                    const at = content.indexOf(original);
+-                    if (at < 0) return content;
++                    const updated = replaceChartBlock(content, original, block);
++                    if (updated === null) return content;
+                     found = true;
+-                    // Splice by index: String.replace would expand `$&` / `$$` in labels.
+-                    return content.slice(0, at) + block + content.slice(at + original.length);
++                    return updated;
+                 });
+             } catch (e) {
+                 new Notice(`Could not save the chart to the file: ${errorText(e)}`);
+                 return;
+             }
+             if (!found) {
+-                new Notice('Could not find the original chart in the note (it may have been edited), so it was inserted at the current position.');
+-                this.insertAtCursor(block);
++                new Notice('The original chart changed or is ambiguous. Nothing was overwritten. Reopen the chart from its note before saving.');
+                 return;
+             }
+             // Later saves of this session still find the block.
+diff --git a/src/text/replaceBlock.ts b/src/text/replaceBlock.ts
+new file mode 100644
+index 0000000..dad0f97
+--- /dev/null
++++ b/src/text/replaceBlock.ts
+@@ -0,0 +1,22 @@
++import { chartFences } from './fences';
++
++/** Replace one uniquely identified chart without touching its surrounding quote/callout. */
++export function replaceChartBlock(content: string, original: string, replacement: string): string | null {
++    const oldLines = original.split(/\r?\n/);
++    const old = chartFences(oldLines.length, n => oldLines[n - 1], new Set(['easy-tikz', 'tikz']));
++    const newLines = replacement.split(/\r?\n/);
++    const next = chartFences(newLines.length, n => newLines[n - 1], new Set(['easy-tikz', 'tikz']));
++    if (old.length !== 1 || next.length !== 1 || !next[0].closed) return null;
++    const lines = content.split(/\r?\n/);
++    const matches = chartFences(lines.length, n => lines[n - 1], new Set([old[0].tag]))
++        .filter(f => f.closed && f.body.trimEnd() === old[0].body.trimEnd());
++    if (matches.length !== 1) return null;
++    const found = matches[0];
++    const opening = lines[found.first - 1];
++    const prefix = /^(?:[ \t]*>[ ]?)*[ \t]*/.exec(opening)?.[0] ?? '';
++    const eol = content.includes('\r\n') ? '\r\n' : '\n';
++    const body = next[0].body.split('\n').map(line => prefix + line);
++    lines.splice(found.first - 1, found.last - found.first + 1,
++        opening, ...body, lines[found.last - 1]);
++    return lines.join(eol);
++}
+diff --git a/tests/replace-callout.test.ts b/tests/replace-callout.test.ts
+new file mode 100644
+index 0000000..7392b0a
+--- /dev/null
++++ b/tests/replace-callout.test.ts
+@@ -0,0 +1,26 @@
++import { test, assert } from './_lib';
++import { replaceChartBlock } from '../src/text/replaceBlock';
++const original = '```easy-tikz\nplot f(x) = x\n```';
++const replacement = '```easy-tikz\nplot f(x) = x^2\nxlabel $t$\n```';
++
++for (const prefix of ['', '> ', '> > ', '  > ']) {
++    test('save keeps chart prefix '+JSON.stringify(prefix), () => {
++        const before = prefix+'[!note] Keep this callout\n'+original.split('\n').map(l=>prefix+l).join('\n')+'\n'+prefix+'Keep this text';
++        const after = replaceChartBlock(before, original, replacement);
++        assert.equal(after,prefix+'[!note] Keep this callout\n'+replacement.split('\n').map(l=>prefix+l).join('\n')+'\n'+prefix+'Keep this text');
++        assert.equal(replaceChartBlock(after!,replacement,original),before);
++    });
++}
++test('tilde fences and CRLF survive a quoted save',()=>{
++    const before='> [!note]\r\n> ~~~~easy-tikz\r\n> plot f(x) = x\r\n> ~~~~\r\nAfter';
++    assert.equal(replaceChartBlock(before,original,replacement),'> [!note]\r\n> ~~~~easy-tikz\r\n> plot f(x) = x^2\r\n> xlabel $t$\r\n> ~~~~\r\nAfter');
++});
++test('duplicate, stale or unclosed charts never overwrite a selection',()=>{
++    assert.equal(replaceChartBlock(original+'\n'+original,original,replacement),null);
++    assert.equal(replaceChartBlock(original.replace('= x','= 2'),original,replacement),null);
++    assert.equal(replaceChartBlock(original.slice(0,-4),original,replacement),null);
++});
++test('replacement labels are literal, not string replacement patterns',()=>{
++    const value='```easy-tikz\nxlabel $$ $& $\'\n```';
++    assert.equal(replaceChartBlock(original,original,value),value);
++});

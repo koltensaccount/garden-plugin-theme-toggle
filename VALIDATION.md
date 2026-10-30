@@ -1,5 +1,15 @@
 # Validation
 
+## Version 1.3.0 Easy TikZ Publishing
+
+2026-10-29: `npm run check` and `npm test` passed (3 tests, none skipped), including the existing Appearance browser test and two focused build-side graph tests. Tests cover 4x PNG dimensions/signatures, distinct light/dark outputs, unchanged source text, callout containment, ordinary MathJax and unrelated fences, cache hits, cache corruption recovery, source-edit invalidation, disabled mode, invalid-source diagnostics, size limits and 2D/3D/JSON export. No runtime dependencies are installed in a garden; the ready-to-copy bundle was used.
+
+An actual upstream garden at `af6a9ecd872be27d1edb5f371748376a62d1a24b` built successfully on Node 22.23.3 with synthetic 2D-in-callout and 3D notes. No core source edits were required. The focused Chrome integration check decoded all PNGs, asserted nonblank pixels and 3040 px natural widths, verified callout containment and the absence of raw graph code, and checked light/dark visibility at 1600 and 390 px. No uncaught page errors occurred. Generated PNGs and mobile screenshot were visually reviewed. Native printing, arbitrary themes, all-plugin combinations, hosted deployment and interactive Easy TikZ editing in the running Obsidian UI were not exercised for this release.
+
+The separate Easy TikZ 4.6.0 callout-save patch passed 7 focused replacement cases, the 4 existing fence cases and a production TypeScript/build check. It preserves quoted/nested/indented callouts, CRLF and tilde fences, literal replacement text and surrounding prose; ambiguous/stale/unclosed targets are refused. The rebuilt artifact was installed locally with a backup of the previous main.js. An Obsidian reload and user confirmation of the editor save remain required. The damaged callout fence in the user's Chapter 1 note was repaired, preserving graph settings and prose.
+
+The initial sandboxed build/browser runs failed due to denied DNS and localhost binding; reruns with approved access passed. Existing dependency audit warnings in upstream Digital Garden/Easy TikZ were not addressed as unrelated upgrades. Historical matrices below are not new validation of the graph renderer.
+
 Version 1.2.0 validated on 2026-10-07, Node 22.23.3 and Google Chrome 154 (Playwright).
 
 ## Accent picker update

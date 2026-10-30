@@ -11,7 +11,7 @@ if (!fs.existsSync(path.join(garden, "src/helpers/pluginLoader.js"))) {
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "garden-plugin.json"), "utf8"));
 const target = path.join(garden, "src/plugins", manifest.id);
 fs.mkdirSync(target, { recursive: true });
-for (const entry of ["garden-plugin.json", "assets", "styles", "templates"]) {
+for (const entry of ["garden-plugin.json", "index.js", "lib", "assets", "styles", "templates"]) {
   fs.cpSync(path.join(root, entry), path.join(target, entry), { recursive: true });
 }
 console.log(`Installed ${manifest.name} into ${target}. Existing settings were preserved.`);

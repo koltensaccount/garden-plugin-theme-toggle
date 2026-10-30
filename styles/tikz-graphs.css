@@ -1,0 +1,10 @@
+.dg-tikz-graph { margin: 1em 0; max-width: 100%; }
+.dg-tikz-graph > img { display: block; width: auto; max-width: 100%; height: auto; margin: 0 auto; }
+.dg-tikz-graph > .dg-tikz-dark { display: none; }
+body.theme-dark .dg-tikz-graph > .dg-tikz-light { display: none; }
+body.theme-dark .dg-tikz-graph > .dg-tikz-dark { display: block; }
+@media print {
+  body .dg-tikz-graph > .dg-tikz-light { display: block !important; }
+  body .dg-tikz-graph > .dg-tikz-dark { display: none !important; }
+  .dg-tikz-graph { break-inside: avoid; }
+}
