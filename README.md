@@ -14,6 +14,12 @@ The footer icon opens visitor preferences. Single-mode themes hide the mode swit
 
 The last swatch opens the browser's native custom-color picker. Its exact color is saved with browser preferences when remembering preferences is enabled. Theme defaults restores theme styling without forgetting the custom color, so it can be selected again later. Custom colors are not automatically contrast-adjusted.
 
+### Mathematical callout links and synced embeds
+
+Appearance & Reading now provides subtle presentation for native Obsidian block references to mathematical callouts. It works with `[[Note#^def-ring|ring]]` and `![[Note#^def-ring]]` when the Obsidian Digital Garden publisher produces the corresponding block anchor and transclusion. A linked callout receives comfortable sticky-header scroll clearance and a restrained outline when targeted; a whole-callout transclusion keeps the original callout styling, without a redundant note-embed frame. A source link remains reachable by hovering/focusing the embed (and remains visible on touch).
+
+This is **read-only presentation**: definitions are edited in Obsidian, and the published garden updates after republishing. Appearance & Reading does not create or rewrite link syntax, resolve note paths, or provide browser-side editing. Publishing logic and missing anchors must be addressed in the Digital Garden compiler rather than hidden by CSS. These rules do not alter ordinary callouts, note embeds, or heading transclusions. The effect is designed to remain quiet in Folio and other themes.
+
 ### Easy TikZ Publishing
 
 Keep editing your graphs with Easy TikZ and publish your notes normally. During the garden build, Appearance renders `easy-tikz` fences into cached, transparent 4x PNGs and places them in the deployed site's image output. Nothing is inserted into your vault, and no export button, companion plugin, browser-side graph engine, TeX installation, remote rendering service or extra credentials are needed. Your editable graph source stays in the note. PNGs are generated at build time, not committed as extra image attachments to your source repository.
