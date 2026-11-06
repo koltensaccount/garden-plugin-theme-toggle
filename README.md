@@ -63,3 +63,16 @@ See [AGENTS.md](AGENTS.md) for the shared visual contract and repository map. Vi
 ### Built-garden color regression
 
 After building the garden, run `GARDEN_DIST=/absolute/path/to/garden/dist CHROME_PATH=/path/to/chromium node --test tests/callout-colors.test.cjs`. This uses the actual compiled garden styles to verify normal and linked callout titles against Folio's light/dark text colors, preserving the deliberately muted remark style and ordinary blue links. The test skips when these integration inputs are not supplied.
+
+### Fast study labels and folded answers
+
+Write `**Question.**`, `**Exercise:**`, or `**Example**` before the prompt. Only these whole bold labels (including plurals) receive Folio's h6 typography; they remain ordinary text and do not add outline entries. Other bold text is unchanged. Code and existing headings are excluded.
+
+Use native folded callouts for responses:
+
+```md
+> [!solution]-
+> Your existing solution.
+```
+
+`[!answer]-` uses the same quiet disclosure style. No HTML or note rewriting is required.

@@ -1,4 +1,4 @@
-/* Generated from callout-links/src/video.js; do not edit this copy. */
+/* Generated from callout-links/src/video.js and src/study-labels.js; do not edit this copy. */
 (function () {
 const videoSources = (() => { const module = { exports: {} };
 'use strict';
@@ -123,6 +123,51 @@ function createVideoEnhancer(setIcon) {
 module.exports = { parseVideoUrl, createVideoEnhancer };
 
 return module.exports; })();
+const studyLabels = (() => { const module = { exports: {} };
+'use strict';
+
+// Exact bold labels only: no heading nodes, source edits, or TOC entries.
+const STUDY_LABEL = /^(?:questions?|exercises?|examples?)[.:]?$/i;
+function isStudyLabel(text) { return STUDY_LABEL.test(text.trim()); }
+function createStudyLabelEnhancer() {
+  const marked = new Set();
+  const excluded = 'pre, code, h1, h2, h3, h4, h5, h6, .callout-title, .HyperMD-codeblock, .cm-hmd-codeblock';
+  function enhance(root) {
+    const wanted = new Set();
+    const candidates = [...(root.matches?.('strong') ? [root] : []), ...root.querySelectorAll('strong')];
+    for (const strong of candidates) {
+      if (!strong.closest(excluded) && isStudyLabel(strong.textContent)) wanted.add(strong);
+    }
+    // CodeMirror can split a bold run into several syntax spans. Match the
+    // complete run, not just a token that happens to say "Question" in prose.
+    const lines = [...(root.matches?.('.cm-line') ? [root] : []), ...root.querySelectorAll('.cm-line')];
+    for (const line of lines) {
+      if (line.closest(excluded)) continue;
+      const walker = line.ownerDocument.createTreeWalker(line, 4 /* SHOW_TEXT */);
+      let text = '', nodes = new Set();
+      function flush() {
+        if (isStudyLabel(text)) for (const node of nodes) wanted.add(node);
+        text = ''; nodes = new Set();
+      }
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const span = node.parentElement?.closest('.cm-strong');
+        if (!span || span.matches('.cm-formatting, .cm-formatting-strong') || span.closest(excluded)) { flush(); continue; }
+        text += node.textContent; nodes.add(span);
+      }
+      flush();
+    }
+    for (const node of marked) {
+      if (!node.isConnected || ((node === root || root.contains(node)) && !wanted.has(node))) {
+        node.classList.remove('folio-study-label'); marked.delete(node);
+      }
+    }
+    for (const node of wanted) { node.classList.add('folio-study-label'); marked.add(node); }
+  }
+  return { enhance, destroy() { for (const node of marked) node.classList.remove('folio-study-label'); marked.clear(); } };
+}
+module.exports = { isStudyLabel, createStudyLabelEnhancer };
+
+return module.exports; })();
 function init() {
   const enhancer = videoSources.createVideoEnhancer((el) => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -134,17 +179,19 @@ function init() {
     const path = document.createElementNS(svg.namespaceURI, 'path');
     path.setAttribute('d', 'M6 9l6 6 6-6'); svg.append(path); el.append(svg);
   });
-  enhancer.enhance(document.body);
+  const labels = studyLabels.createStudyLabelEnhancer();
+  const enhance = () => { enhancer.enhance(document.body); labels.enhance(document.body); };
+  enhance();
   // Also cover notes inserted by garden panes/navigation, without rewriting Markdown.
   let pending = false;
   const observer = new MutationObserver(() => {
     if (pending) return;
     pending = true;
-    queueMicrotask(() => { pending = false; enhancer.enhance(document.body); });
+    queueMicrotask(() => { pending = false; enhance(); });
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
   window.addEventListener('pagehide', (event) => {
-    if (!event.persisted) { observer.disconnect(); enhancer.destroy(); }
+    if (!event.persisted) { observer.disconnect(); enhancer.destroy(); labels.destroy(); }
   });
 }
 if (document.readyState === 'complete') init();

@@ -38,11 +38,11 @@ installed part of this site plugin. Never silently monkey-patch another plugin.
 | Surface | Repository | Owned files |
 | --- | --- | --- |
 | Obsidian appearance | [Folio](https://github.com/koltensaccount/Folio) | `src/*.css`, generated `theme.css` |
-| Obsidian callout behavior | [callout-links](https://github.com/koltensaccount/callout-links) | `src/video.js`, `src/plugin.js`, generated `main.js` |
+| Obsidian callout behavior | [callout-links](https://github.com/koltensaccount/callout-links) | `src/video.js`, `src/study-labels.js`, `src/plugin.js`, generated `main.js` |
 | Garden behavior | [garden-plugin-theme-toggle](https://github.com/koltensaccount/garden-plugin-theme-toggle) | plugin source, manifest, generated `assets/video-sources.js` |
 | Garden integration | [my-digital-garden](https://github.com/koltensaccount/my-digital-garden) | `src/site/styles/custom-style.scss`, generated `_folio-callouts.scss`, installed Appearance plugin |
 
-Do not hand-edit generated CSS/runtime copies. Folio's `scripts/sync_garden.py` copies the canonical callout CSS and Callout Links video behavior to the garden repositories; run it after either canonical source changes. Garden-specific layout adapters belong in the garden stylesheet, without regressing Obsidian to accommodate them. Never edit a bundled/minified plugin copy as the only implementation.
+Do not hand-edit generated CSS/runtime copies. Folio's `scripts/sync_garden.py` copies the canonical callout CSS and Callout Links video and study-label behavior to the garden repositories; run it after either canonical source changes. Garden-specific layout adapters belong in the garden stylesheet, without regressing Obsidian to accommodate them. Never edit a bundled/minified plugin copy as the only implementation.
 
 ## Required workflow
 
