@@ -143,7 +143,9 @@ function init() {
     queueMicrotask(() => { pending = false; enhancer.enhance(document.body); });
   });
   observer.observe(document.body, { childList: true, subtree: true });
-  window.addEventListener('pagehide', () => { observer.disconnect(); enhancer.destroy(); }, { once: true });
+  window.addEventListener('pagehide', (event) => {
+    if (!event.persisted) { observer.disconnect(); enhancer.destroy(); }
+  });
 }
 if (document.readyState === 'complete') init();
 else window.addEventListener('load', init, { once: true });
