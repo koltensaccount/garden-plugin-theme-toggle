@@ -59,3 +59,7 @@ MIT, copyright 2026 Kolten Bendickson.
 ## Obsidian and garden design policy
 
 See [AGENTS.md](AGENTS.md) for the shared visual contract and repository map. Visual changes on either surface must be reviewed and carried across to the other. Obsidian's authoring quality takes priority over forced sameness. Folio's `scripts/sync_garden.py` generates the shared callout styling and video behavior; `--check` detects stale copies.
+
+### Built-garden color regression
+
+After building the garden, run `GARDEN_DIST=/absolute/path/to/garden/dist CHROME_PATH=/path/to/chromium node --test tests/callout-colors.test.cjs`. This uses the actual compiled garden styles to verify normal and linked callout titles against Folio's light/dark text colors, preserving the deliberately muted remark style and ordinary blue links. The test skips when these integration inputs are not supplied.

@@ -47,3 +47,7 @@ Chromium/Edge was exercised, not Firefox/WebKit or physical touch hardware. Nati
 ## Folio visual parity and fast video sources — 6 November 2026
 
 Version 1.5.0 includes generated rendering-only video-source behavior from Callout Links. The user's one-line `[!video] [Title](YouTube URL)` syntax works without authored iframe HTML. A real Eleventy build and its temporary unpublished fixture verified collapsed/expanded cards, no iframe before expansion, light/dark colors, a narrow viewport, and source-only output even with Clean Print's expand-callouts preference. Browser tests also exercise keyboard controls, native-listener coexistence, and dynamically inserted panes. Existing appearance and graph regression tests passed. Folio's sync checker verifies generated CSS and runtime copies. Shell/font geometry can differ between Obsidian and a visitor's browser; Obsidian authoring quality remains the priority.
+
+### Callout title colors
+
+The garden adapter explicitly applies Folio's callout-title color to both title containers and their inner text, and linked titles inherit that color rather than the site's global blue-link override. An integration browser test against the compiled garden CSS verifies note/definition/theorem/video titles and linked titles in light and dark modes, with muted remarks preserved. Obsidian's canonical theme colors were reviewed and remain unchanged.
