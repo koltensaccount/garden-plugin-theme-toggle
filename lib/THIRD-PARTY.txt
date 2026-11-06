@@ -4,6 +4,9 @@ Source: https://github.com/Saiki77/easy-tikz
 Pinned commit: 51c6a7c2b86d0a5b439191e0511518ea22b203bc
 Adaptations: a headless DOM, SVG MathJax labels, deterministic light/dark
 palettes and PNG export, in build/tikz-*.js. No Obsidian UI is included.
+The endpoint/point-fill extension is preserved in
+compat/easy-tikz-4.6-endpoint-styles.patch; apply it to the pinned source
+before rebuilding this renderer.
 
 MathJax 3.2.2, Apache-2.0, MathJax Consortium.
 https://github.com/mathjax/MathJax-src

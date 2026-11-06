@@ -1,5 +1,9 @@
 # Validation
 
+## Version 1.4.0 Endpoint Styles
+
+2026-11-05: preserves the current callout-reference support. Four Appearance tests and syntax/manifest checks pass, including PNG pixel differences for hollow points and independent path ends. Focused Easy TikZ suites pass: endpoints (6), scene (50), migration (46), text/math context (62), export (29), callout replacement (7). The production TypeScript build passes. An isolated Obsidian check exercised Filled/Hollow and Start/End controls, retaining the opposite endpoint; screenshots were captured at desktop/mobile sizes. Final user visual confirmation is pending. No further visual matrix was run at the user's request. The local Easy TikZ extension remains based on 4.6.0 plus the preserved callout fix; future upstream updates can overwrite it.
+
 ## Version 1.3.0 Easy TikZ Publishing
 
 2026-10-29: `npm run check` and `npm test` passed (3 tests, none skipped), including the existing Appearance browser test and two focused build-side graph tests. Tests cover 4x PNG dimensions/signatures, distinct light/dark outputs, unchanged source text, callout containment, ordinary MathJax and unrelated fences, cache hits, cache corruption recovery, source-edit invalidation, disabled mode, invalid-source diagnostics, size limits and 2D/3D/JSON export. No runtime dependencies are installed in a garden; the ready-to-copy bundle was used.
