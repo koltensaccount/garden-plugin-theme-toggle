@@ -51,3 +51,7 @@ Version 1.5.0 includes generated rendering-only video-source behavior from Callo
 ### Callout title colors
 
 The garden adapter explicitly applies Folio's callout-title color to both title containers and their inner text, and linked titles inherit that color rather than the site's global blue-link override. An integration browser test against the compiled garden CSS verifies note/definition/theorem/video titles and linked titles in light and dark modes, with muted remarks preserved. Obsidian's canonical theme colors were reviewed and remain unchanged.
+
+### Hover preview title colors
+
+Color integration checks now cover callouts outside `main.content`, including the actual `#tooltip-content` wrapper and independent panes. A real local garden page was opened and its Introduction link hovered; the copied definition title was verified as Folio's off-white in dark mode. The same color matrix verifies plain and linked titles across all three locations in light/dark modes.
