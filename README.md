@@ -55,3 +55,7 @@ The ready-to-copy `lib/` bundle includes the headless renderer, rasterizer, font
 ## License
 
 MIT, copyright 2026 Kolten Bendickson.
+
+## Obsidian and garden design policy
+
+See [AGENTS.md](AGENTS.md) for the shared visual contract and repository map. Visual changes on either surface must be reviewed and carried across to the other. Obsidian's authoring quality takes priority over forced sameness. Folio's `scripts/sync_garden.py` generates the shared callout styling and video behavior; `--check` detects stale copies.

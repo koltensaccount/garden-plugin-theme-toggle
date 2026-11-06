@@ -43,3 +43,7 @@ Eight separate stress scenarios passed: left-only, right-only, no panes, both co
 ## Limits
 
 Chromium/Edge was exercised, not Firefox/WebKit or physical touch hardware. Native browser `dialog`, modern layout CSS and optional relative OKLCH are used; unsupported relative colors fall back to the theme accent. Accent contrast is checked against the primary background, not every possible third-party theme surface. Current core uses full-document navigation; disabling/uninstalling is supported through rebuild and page reload, not a hot-unload API. Third-party navigation replacements may require integration checks.
+
+## Folio visual parity and fast video sources — 6 November 2026
+
+Version 1.5.0 includes generated rendering-only video-source behavior from Callout Links. The user's one-line `[!video] [Title](YouTube URL)` syntax works without authored iframe HTML. A real Eleventy build and its temporary unpublished fixture verified collapsed/expanded cards, no iframe before expansion, light/dark colors, a narrow viewport, and source-only output even with Clean Print's expand-callouts preference. Browser tests also exercise keyboard controls, native-listener coexistence, and dynamically inserted panes. Existing appearance and graph regression tests passed. Folio's sync checker verifies generated CSS and runtime copies. Shell/font geometry can differ between Obsidian and a visitor's browser; Obsidian authoring quality remains the priority.
