@@ -1,0 +1,561 @@
+diff --git a/scripts/media/endpoints-check.mjs b/scripts/media/endpoints-check.mjs
+new file mode 100644
+index 0000000..7283731
+--- /dev/null
++++ b/scripts/media/endpoints-check.mjs
+@@ -0,0 +1,41 @@
++import assert from 'node:assert/strict';
++import {launch} from './lib/obsidian.mjs';
++let obs;
++try{
++  obs=await launch({port:9395,workDir:'/private/tmp/etz-endpoint-ui-nov5',plugin:'source',width:1440,height:1000,theme:'dark'});
++  await obs.openEditor({chart:{v:4,xmin:-3,xmax:3,ymin:-2,ymax:2,tools:[
++    {type:'points',name:'P1',points:'(0,0.5)'},
++    {type:'segment',name:'S1',path:'(-2,0); (2,0)',start:'hollow',end:'arrow'},
++  ]}});
++  await obs.reveal('P1');
++  await obs.call(()=>{
++    const radio=[...document.querySelectorAll('[role="radiogroup"]')].find(el=>el.getAttribute('aria-label')==='Point fill'||el.getAttribute('aria-labelledby')?.split(' ').some(id=>document.getElementById(id)?.textContent==='Fill'));
++    if(!radio)throw Error('Point fill control missing');
++    const b=[...radio.querySelectorAll('button')].find(b=>b.textContent==='Hollow');
++    b.click();
++  });
++  await obs.waitForRender();
++  const chart=await obs.chart();assert.equal(chart.tools.find(t=>t.name==='P1').hollow,true);
++  await obs.screenshot('/private/tmp/etz-points-hollow-desktop.png',{clip:'editor',scale:0.5});
++  await obs.reveal('S1');
++  await obs.call(()=>{
++    const select=[...document.querySelectorAll('select')].find(el=>Array.from(el.labels||[]).some(label=>label.textContent==='Start')||el.getAttribute('aria-label')==='Start endpoint');
++    if(!select)throw Error('Start endpoint control missing');
++    select.value='dot';select.dispatchEvent(new Event('change',{bubbles:true}));
++  });
++  await obs.waitForRender();
++  const updated=await obs.chart();assert.equal(updated.tools.find(t=>t.name==='S1').start,'dot');
++  assert.equal(updated.tools.find(t=>t.name==='S1').end,'arrow');
++  await obs.screenshot('/private/tmp/etz-endpoints-desktop.png',{clip:'editor',scale:0.5});
++  await obs.setWindowSize(430,900);
++  await obs.reveal('S1');
++  const fits=await obs.call(()=>{
++    const controls=[...document.querySelectorAll('select')].filter(el=>Array.from(el.labels||[]).some(label=>/^(Start|End)$/.test(label.textContent||'')));
++    return controls.length===2&&controls.every(el=>el.getBoundingClientRect().width<=el.parentElement.getBoundingClientRect().width+1);
++  });
++  assert(fits);
++  await obs.screenshot('/private/tmp/etz-endpoints-mobile.png',{clip:'editor',scale:0.5});
++  assert.equal((await obs.issues()).length,0);
++  assert.equal(obs.errors.length,0);
++  console.log('PASS: real isolated Obsidian hollow-point and endpoint controls, retained opposite end, preview, desktop/mobile.');
++}finally{if(obs)await obs.quit();}
+diff --git a/src/endpoints.ts b/src/endpoints.ts
+new file mode 100644
+index 0000000..a952a38
+--- /dev/null
++++ b/src/endpoints.ts
+@@ -0,0 +1,16 @@
++import type { EndpointStyle, SegmentTool } from './types';
++
++export const ENDPOINT_STYLES: readonly EndpointStyle[] = ['none', 'arrow', 'dot', 'hollow'];
++
++export function endpointOf(tool: SegmentTool, side: 'start' | 'end'): EndpointStyle {
++    if (ENDPOINT_STYLES.includes(tool[side]!)) return tool[side]!;
++    return tool.style === 'both' || tool.style === (side === 'start' ? 'backward' : 'forward') ? 'arrow' : 'none';
++}
++
++export function explicitEndpoints(tool: SegmentTool): boolean {
++    return tool.start !== undefined || tool.end !== undefined;
++}
++
++export function arrowEnds(start: EndpointStyle, end: EndpointStyle): 'forward' | 'backward' | 'both' | undefined {
++    return start === 'arrow' ? end === 'arrow' ? 'both' : 'backward' : end === 'arrow' ? 'forward' : undefined;
++}
+diff --git a/src/export.ts b/src/export.ts
+index e38fb0b..48f413e 100644
+--- a/src/export.ts
++++ b/src/export.ts
+@@ -806,10 +806,10 @@ function addMarkers(layers: Layers, item: SceneItem2D, colors: ColorSet, view: V
+         if (!finitePt(m) || !inView(m, view, 0)) continue;
+         const c = colors.use(m.color);
+         const size = MARK_SIZE[m.size] || MARK_SIZE.normal;
+-        const key = `${c}|${size}|${m.dim ? 1 : 0}`;
++        const key = `${c}|${size}|${m.dim ? 1 : 0}|${m.hollow ? 1 : 0}`;
+         let g = groups.length ? groups[groups.length - 1] : null;
+         if (!g || g.key !== key) {
+-            const opts = ['only marks', 'mark=*', `mark size=${size}`, c, 'mark options={draw=white, line width=0.4pt}'];
++            const opts = ['only marks', 'mark=*', `mark size=${size}`, c, m.hollow ? `mark options={fill=white, draw=${c}, line width=0.6pt}` : 'mark options={draw=white, line width=0.4pt}'];
+             if (m.dim) opts.push(`opacity=${fmtNum(DIM_OPACITY)}`);
+             opts.push('forget plot');
+             g = { key, opts: opts.join(', '), pts: [] };
+@@ -1375,7 +1375,7 @@ function pointCmds(scene: Scene3D, box: Box, colors: ColorSet): string[] {
+         if (!in3D(at, box, 0)) continue;
+         const c = colors.use(p.color);
+         const size = MARK_SIZE[p.size] || MARK_SIZE.normal;
+-        out.push(`\\addplot3[only marks, mark=*, mark size=${size}, ${c}, forget plot] coordinates {${tuple3(at)}};`);
++        out.push(`\\addplot3[only marks, mark=*, mark size=${size}, ${c}, ${p.hollow ? `mark options={fill=white, draw=${c}}, ` : ''}forget plot] coordinates {${tuple3(at)}};`);
+         const label = labelText(p.label || '');
+         if (label) out.push(`\\node[${c}, anchor=south west, font=${FONT.small}] at (axis cs:${tuple3(at).slice(1)} {${label}};`);
+     }
+diff --git a/src/migrate.ts b/src/migrate.ts
+index cd87392..382fcac 100644
+--- a/src/migrate.ts
++++ b/src/migrate.ts
+@@ -1065,6 +1065,7 @@ function completePoints(src: Record<string, unknown>, ctx: ConvertContext): Poin
+         label: str(src.label, d.label),
+         dropLines: bool(src.dropLines, d.dropLines),
+         size: oneOf(src.size, MARKER_SIZES, d.size),
++        ...(src.hollow === true ? { hollow: true } : {}),
+     };
+ }
+ 
+@@ -1077,6 +1078,8 @@ function completeSegment(src: Record<string, unknown>, ctx: ConvertContext): Seg
+         path: str(src.path, d.path),
+         closed: bool(src.closed, d.closed),
+         style: oneOf(src.style, SEGMENT_STYLES, d.style),
++        ...(typeof src.start === 'string' && ['none','arrow','dot','hollow'].includes(src.start) ? { start: src.start as import('./types').EndpointStyle } : {}),
++        ...(typeof src.end === 'string' && ['none','arrow','dot','hollow'].includes(src.end) ? { end: src.end as import('./types').EndpointStyle } : {}),
+         thickness: thicknessOf(src.thickness, d.thickness),
+         dashed: bool(src.dashed, d.dashed),
+         label: str(src.label, d.label),
+@@ -1711,8 +1714,8 @@ function recipes2D(): Recipe[] {
+         {
+             id: 'segment',
+             section: 'Segments and arrows',
+-            label: 'Line segment',
+-            hint: 'A straight segment between two points.',
++            label: 'Line or path',
++            hint: 'Connect points, then choose what appears at the start and end. Closed joins a polygon.',
+             available: in2D,
+             build: (ctx) => segmentRecipe(ctx, { path: '(1, 1); (4, 3)' }),
+         },
+diff --git a/src/renderer.ts b/src/renderer.ts
+index fa983f6..eddd938 100644
+--- a/src/renderer.ts
++++ b/src/renderer.ts
+@@ -1254,8 +1254,8 @@ export class SVGRenderer {
+             cx: num(this.sx(m.x)),
+             cy: num(this.sy(m.y)),
+             r: String(r),
+-            fill: this.css(m.color),
+-            stroke: BACKGROUND,
++            fill: m.hollow ? BACKGROUND : this.css(m.color),
++            stroke: m.hollow ? this.css(m.color) : BACKGROUND,
+             'stroke-width': this.compact ? '1' : '1.5',
+         };
+         if (m.dim) attrs.opacity = '0.45';
+diff --git a/src/renderer3d.ts b/src/renderer3d.ts
+index aa8ee24..7ac2622 100644
+--- a/src/renderer3d.ts
++++ b/src/renderer3d.ts
+@@ -148,6 +148,7 @@ interface MarkerMark {
+     sy: number;
+     r: number;
+     color: string;
++    hollow?: boolean;
+     /** Plain text (LaTeX stripped); '' for none. */
+     label: string;
+ }
+@@ -1059,6 +1060,7 @@ export class SVG3DRenderer {
+                 sy: q.sy,
+                 r: MARKER_RADIUS[p.size] || MARKER_RADIUS.normal,
+                 color: this.colorInfo(p.color).css,
++                hollow: p.hollow,
+                 label: p.label ? labelDisplayText(p.label, stripLatex) : '',
+             });
+         }
+@@ -1245,8 +1247,8 @@ export class SVG3DRenderer {
+             circle.setAttribute('cx', m.sx.toFixed(2));
+             circle.setAttribute('cy', m.sy.toFixed(2));
+             circle.setAttribute('r', String(m.r));
+-            circle.setAttribute('fill', m.color);
+-            circle.setAttribute('stroke', this.themeColors.bgPrimary);
++            circle.setAttribute('fill', m.hollow ? this.themeColors.bgPrimary : m.color);
++            circle.setAttribute('stroke', m.hollow ? m.color : this.themeColors.bgPrimary);
+             circle.setAttribute('stroke-width', '1.5');
+             group.appendChild(circle);
+         }
+@@ -1530,10 +1532,10 @@ export class SVG3DRenderer {
+         for (const m of this.markerMarks) {
+             ctx.beginPath();
+             ctx.arc(m.sx, m.sy, m.r, 0, Math.PI * 2);
+-            ctx.fillStyle = m.color;
++            ctx.fillStyle = m.hollow ? this.themeColors.bgPrimary : m.color;
+             ctx.fill();
+             ctx.lineWidth = 1.5;
+-            ctx.strokeStyle = this.themeColors.bgPrimary;
++            ctx.strokeStyle = m.hollow ? m.color : this.themeColors.bgPrimary;
+             ctx.stroke();
+         }
+         ctx.font = this.canvasFont(11);
+diff --git a/src/scene.ts b/src/scene.ts
+index cdbf84e..e572927 100644
+--- a/src/scene.ts
++++ b/src/scene.ts
+@@ -46,6 +46,7 @@ import { findExtrema1D } from './math';
+ import { errorText } from './util';
+ 
+ export type ArrowHeads = 'forward' | 'backward' | 'both';
++import { endpointOf, explicitEndpoints, arrowEnds } from './endpoints';
+ 
+ export interface FillPrim {
+     /** Even-odd rings. */
+@@ -74,6 +75,7 @@ export interface MarkerPrim {
+     y: number;
+     color: string;
+     size: MarkerSize;
++    hollow?: boolean;
+     /** Drawn with reduced opacity (e.g. optimum of an unbounded problem within the view). */
+     dim?: boolean;
+ }
+@@ -358,6 +360,7 @@ interface Point3Spec {
+     z: number;
+     color: string;
+     size: MarkerSize;
++    hollow?: boolean;
+     part: number;
+     locals: Record<string, number>;
+ }
+@@ -1879,7 +1882,7 @@ function computePointsTool(t: PointsTool, ctx: Ctx): Output {
+     const locked: LockKind | undefined =
+         t.source === 'region' ? (objective ? 'optimum' : 'corner') : t.source === 'intersections' ? 'intersection' : t.source === 'lattice' ? 'lattice' : undefined;
+     pts.forEach((p, index) => {
+-        const m: MarkerPrim = { x: p.x, y: p.y, color, size };
++        const m: MarkerPrim = { x: p.x, y: p.y, color, size, ...(t.hollow ? {hollow:true} : {}) };
+         if (dim) m.dim = true;
+         out.markers.push(m);
+         const handle: HandlePrim = { ref: { part: 'point', index, item: items[index] ?? -1 }, point: { x: p.x, y: p.y } };
+@@ -1989,7 +1992,13 @@ function computeSegmentTool(t: SegmentTool, ctx: Ctx): Output {
+     const arrow = ARROWS[t.style];
+     const width = str(t.thickness) || 'thin';
+     const dashed = !!t.dashed;
+-    if (arrow) {
++    if (explicitEndpoints(t)) {
++        const start=endpointOf(t,'start'), end=endpointOf(t,'end');
++        out.strokes.push({lines:[pts],color,width,dashed,exact:true,...(t.closed?{closed:true}:{arrow:arrowEnds(start,end)})});
++        if(!t.closed) for(const [kind,p] of [[start,pts[0]],[end,pts[pts.length-1]]] as const){
++            if(kind==='dot'||kind==='hollow')out.markers.push({x:p.x,y:p.y,color,size:'normal',...(kind==='hollow'?{hollow:true}:{})});
++        }
++    } else if (arrow) {
+         // Arrow heads on every leg (a simplex path), closing leg included.
+         const legs: Pt[][] = [];
+         for (let i = 1; i < pts.length; i++) legs.push([pts[i - 1], pts[i]]);
+@@ -3519,7 +3528,7 @@ export function edgeLabelSide3D(
+ }
+ 
+ export interface Scene3D {
+-    points: Array<{ x: number; y: number; z: number; color: string; size: MarkerSize; label?: string }>;
++    points: Array<{ x: number; y: number; z: number; color: string; size: MarkerSize; label?: string; hollow?: boolean }>;
+     segments: Array<{
+         a: [number, number, number];
+         b: [number, number, number];
+@@ -3558,6 +3567,7 @@ function computePoints3D(t: PointsTool, ctx: Ctx): Output {
+         z: p[2],
+         color,
+         size,
++        ...(t.hollow ? {hollow:true} : {}),
+         part: i,
+         locals: { x: p[0], y: p[1], z: p[2], val: NaN, i: i + 1 },
+     }));
+@@ -3581,11 +3591,21 @@ function computeSegment3D(t: SegmentTool, ctx: Ctx): Output {
+     const arrow = ARROWS[t.style];
+     const color = str(t.color) || 'black';
+     const width = str(t.thickness) || 'thin';
+-    out.segments3 = legs.map(([a, b]) => {
++    const modern=explicitEndpoints(t);
++    const start=endpointOf(t,'start'), end=endpointOf(t,'end');
++    out.segments3 = legs.map(([a, b],index) => {
+         const s: Scene3D['segments'][number] = { a: triple(a), b: triple(b), color, width, dashed: !!t.dashed };
+-        if (arrow) s.arrow = arrow;
++        if(modern){
++            if(!t.closed)s.arrow=arrowEnds(index===0?start:'none',index===legs.length-1?end:'none');
++        }else if (arrow) s.arrow = arrow;
+         return s;
+     });
++    if(modern&&!t.closed){
++        out.points3=[];
++        for(const [kind,p] of [[start,pts[0]],[end,pts[pts.length-1]]] as const){
++            if(kind==='dot'||kind==='hollow')out.points3.push({x:p[0],y:p[1],z:p[2],color,size:'normal',part:0,locals:{},...(kind==='hollow'?{hollow:true}:{})});
++        }
++    }
+     return out;
+ }
+ 
+@@ -3671,7 +3691,7 @@ function scene3D(input: SceneInput3D): Scene3D {
+         if (t.hidden) return;
+         const formatter = labelFormatter(node, math, scene.issues);
+         for (const p of out.points3 || []) {
+-            const point: Scene3D['points'][number] = { x: p.x, y: p.y, z: p.z, color: p.color, size: p.size };
++            const point: Scene3D['points'][number] = { x: p.x, y: p.y, z: p.z, color: p.color, size: p.size, ...(p.hollow?{hollow:true}:{}) };
+             const label = formatter({ template: 'label', part: p.part, locals: p.locals });
+             if (label.trim()) point.label = label;
+             scene.points.push(point);
+diff --git a/src/text/parse.ts b/src/text/parse.ts
+index 9dbe3a3..d6ebfb9 100644
+--- a/src/text/parse.ts
++++ b/src/text/parse.ts
+@@ -537,11 +537,17 @@ function applyKindOption(b: Builder, kind: string, target: Data, opt: Piece): bo
+         return false;
+     }
+     if (kind === 'curve' || kind === 'segment') {
++        if(kind==='segment'){
++            const endpoint=/^(start|end)\s+(none|arrow|dot|hollow)$/i.exec(opt.text.trim());
++            if(endpoint)return set(target,endpoint[1].toLowerCase(),endpoint[2].toLowerCase());
++        }
+         if (lower === 'dashed') return set(target, 'dashed', true);
+         if (kind === 'segment' && lower === 'backwards' && target.style === 'forward') return set(target, 'style', 'backward');
+         return false;
+     }
+     if (kind === 'points') {
++        if (lower === 'hollow') return set(target, 'hollow', true);
++        if (lower === 'filled') return set(target, 'hollow', false);
+         if (lower === 'small' || lower === 'large' || lower === 'normal') return set(target, 'size', lower);
+         if (lower === 'drop lines') return set(target, 'dropLines', true);
+         if (lower === 'coordinates') return set(target, 'label', '({x:2}, {y:2})');
+diff --git a/src/text/print.ts b/src/text/print.ts
+index 9f0b057..32826d1 100644
+--- a/src/text/print.ts
++++ b/src/text/print.ts
+@@ -406,6 +406,7 @@ function toolLine(min: Data, full: Data, ctx: Ctx): string {
+         o.take('constraintLines', (v) => (v === true ? 'with constraint lines' : null));
+         o.label();
+     } else if (type === 'points') {
++        o.take('hollow', v => v === true ? 'hollow' : null);
+         o.colour();
+         o.take('size', (v) => (v === 'small' || v === 'large' || v === 'normal' ? v : null));
+         o.take('dropLines', (v) => (v === true ? 'with lines to the axes' : null));
+@@ -413,6 +414,11 @@ function toolLine(min: Data, full: Data, ctx: Ctx): string {
+     } else if (type === 'plane3D') {
+         o.colour();
+         o.take('fillOpacity', (v) => (typeof v === 'number' && Number.isFinite(v) ? `opacity ${v}` : null));
++    } else if(type === 'segment') {
++        o.take('start',v=>typeof v==='string'&&['none','arrow','dot','hollow'].includes(v)?`start ${v}`:null);
++        o.take('end',v=>typeof v==='string'&&['none','arrow','dot','hollow'].includes(v)?`end ${v}`:null);
++        o.common();
++        o.label();
+     } else {
+         o.common();
+         o.label();
+diff --git a/src/types.ts b/src/types.ts
+index 227fa71..9948c9f 100644
+--- a/src/types.ts
++++ b/src/types.ts
+@@ -131,6 +131,7 @@ export type ArrowStyle = 'none' | 'forward' | 'backward' | 'both';
+ export type SegmentStyle = 'line' | 'forward' | 'backward' | 'both' | 'brace';
+ export type OutlineStyle = 'none' | 'solid' | 'dashed';
+ export type MarkerSize = 'small' | 'normal' | 'large';
++export type EndpointStyle = 'none' | 'arrow' | 'dot' | 'hollow';
+ 
+ export interface ToolBase {
+     /** Stable id (UI keys, caches). Random for new tools, `t<index>` for migrated ones. */
+@@ -216,6 +217,7 @@ export interface PointsTool extends ToolBase {
+     /** Dashed guide lines from each point to the axes (2D only). */
+     dropLines: boolean;
+     size: MarkerSize;
++    hollow?: boolean;
+ }
+ 
+ export interface SegmentTool extends ToolBase {
+@@ -231,6 +233,8 @@ export interface SegmentTool extends ToolBase {
+     closed: boolean;
+     /** Arrow styles apply to every leg; brace uses the first two points only. */
+     style: SegmentStyle;
++    start?: EndpointStyle;
++    end?: EndpointStyle;
+     thickness: string;
+     dashed: boolean;
+     /** Template drawn beside the middle of the path / brace ('' = none). */
+diff --git a/src/ui/buildPanel.ts b/src/ui/buildPanel.ts
+index f2c0b4f..9fd1d30 100644
+--- a/src/ui/buildPanel.ts
++++ b/src/ui/buildPanel.ts
+@@ -924,6 +924,7 @@ export function createBuildPanel(parent: HTMLElement, host: PanelHost, options:
+         const ctx = recipeContext();
+         const groups = new Map<string, Recipe[]>();
+         for (const r of recipes(is3D)) {
++            if (r.id === 'arrow' || r.id === 'polyline') continue;
+             if (!r.available(ctx)) continue;
+             const isFunction = r.section === 'Functions';
+             if (scope === 'functions' && !isFunction) continue;
+@@ -935,7 +936,7 @@ export function createBuildPanel(parent: HTMLElement, host: PanelHost, options:
+         const heading = (section: string) => {
+             if (section === 'Functions') return is3D ? 'Surfaces' : 'Functions';
+             if (section === '3D') return 'Shapes in space';
+-            return section;
++            return section === 'Segments and arrows' ? 'Lines and paths' : section;
+         };
+         groups.forEach((list, section) => {
+             const id = `etz-${section.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+@@ -943,7 +944,7 @@ export function createBuildPanel(parent: HTMLElement, host: PanelHost, options:
+             for (const r of list) {
+                 menu.addItem((i) =>
+                     i
+-                        .setTitle(r.label)
++                        .setTitle(r.id==='segment'?'Line or path':r.label)
+                         .setIcon(SECTION_ICONS[r.section] ?? 'plus')
+                         .setSection(id)
+                         .onClick(() => applyRecipe(r)),
+diff --git a/src/ui/helpPanel.ts b/src/ui/helpPanel.ts
+index d0d1293..83b48ae 100644
+--- a/src/ui/helpPanel.ts
++++ b/src/ui/helpPanel.ts
+@@ -359,7 +359,7 @@ const SECTIONS: Section[] = [
+             'A segment joins points separated by `;`, for example `(0, 0); (3, 2)`. Coordinates may be formulas, and the name of a points tool inserts its points: `(0, 0); P1`.',
+             {
+                 list: [
+-                    'Style: line, arrow forward, backward or both, or brace.',
++                    'Choose a line/path or brace. Open paths have independent Start and End choices: None, Arrowhead, Filled dot, or Hollow dot. Closed polygons have no endpoints.',
+                     '**Closed** joins the last point back to the first (a polygon outline).',
+                     'A brace uses the first two points and bulges to the left of the direction from the first point to the second. Swap the points to flip it.',
+                     'The label (a template) sits beside the middle of the path.',
+diff --git a/src/ui/layerCards.ts b/src/ui/layerCards.ts
+index 5c1a1eb..6767e3a 100644
+--- a/src/ui/layerCards.ts
++++ b/src/ui/layerCards.ts
+@@ -18,6 +18,7 @@ import {
+     FunctionParameters,
+     Function3DParameters,
+     MarkerSize,
++    EndpointStyle,
+     OutlineStyle,
+     Parameter,
+     PlaneTool,
+@@ -29,6 +30,7 @@ import {
+ } from '../types';
+ import { Issue, LABEL_LOCALS, ValidateKind, ValidateResult } from '../mathcontext';
+ import { FILL_PATTERN_OPTIONS } from '../colors';
++import { endpointOf } from '../endpoints';
+ import type { SceneIssue } from '../scene';
+ import { RESERVED_NAMES, RecipeContext, defaultTool, recipes } from '../migrate';
+ import { CardActions, PanelHost } from './host';
+@@ -1481,6 +1483,13 @@ class PointsCard extends ToolCard<PointsTool> {
+             },
+         });
+         sizeField.bind(size.el);
++        const fillField=field(body,{label:'Fill',layout:'inline'});
++        const fill=segmented<'filled'|'hollow'>(fillField.controlEl,{
++            label:'Point fill',value:t.hollow?'hollow':'filled',
++            options:[{value:'filled',text:'Filled'},{value:'hollow',text:'Hollow'}],
++            onChange:v=>{if(v==='hollow')t.hollow=true;else delete t.hollow;this.changed();},
++        });
++        fillField.bind(fill.el);
+         if (!this.is3D()) {
+             this.dropLinesChip = chip(sizeField.controlEl, {
+                 label: 'Drop lines',
+@@ -1496,6 +1505,7 @@ class PointsCard extends ToolCard<PointsTool> {
+             this.sourceSeg.setValue(t.source);
+             this.senseSeg.setValue(t.sense);
+             size.setValue(t.size);
++            fill.setValue(t.hollow?'hollow':'filled');
+             if (this.dropLinesChip) this.dropLinesChip.setValue(t.dropLines);
+             // Custom mode survives a refresh even while its text is blank or still
+             // the coordinates template it started from (the user is editing it).
+@@ -1671,15 +1681,12 @@ class SegmentCard extends ToolCard<SegmentTool> {
+         // Braces are 2D only; a 3D segment keeps the option only while it is selected.
+         const styles: Array<SegmentOption<SegmentStyle>> = [
+             { value: 'line', text: 'Line' },
+-            { value: 'forward', icon: 'arrow-right', ariaLabel: 'Arrow at the end' },
+-            { value: 'backward', icon: 'arrow-left', ariaLabel: 'Arrow at the start' },
+-            { value: 'both', icon: 'move-horizontal', ariaLabel: 'Arrows at both ends' },
+             { value: 'brace', text: 'Brace' },
+         ];
+         const styleField = field(this.body, { label: 'Style', layout: 'inline' });
+         const style = segmented<SegmentStyle>(styleField.controlEl, {
+             label: 'Style',
+-            value: t.style,
++            value: t.style==='brace'?'brace':'line',
+             options: is3D ? styles.filter((s) => s.value !== 'brace' || t.style === 'brace') : styles,
+             onChange: (v) => {
+                 t.style = v;
+@@ -1687,6 +1694,19 @@ class SegmentCard extends ToolCard<SegmentTool> {
+             },
+         });
+         styleField.bind(style.el);
++        const ends=(['start','end'] as const).map(side=>{
++            const row=field(this.body,{label:side==='start'?'Start':'End',layout:'inline'});
++            const control=dropdown<EndpointStyle>(row.controlEl,{
++                label:side==='start'?'Start endpoint':'End endpoint',value:endpointOf(t,side),
++                options:[{value:'none',text:'None'},{value:'arrow',text:'Arrowhead'},{value:'dot',text:'Filled dot'},{value:'hollow',text:'Hollow dot'}],
++                onChange:value=>{
++                    const start=endpointOf(t,'start'),end=endpointOf(t,'end');
++                    t.start=start;t.end=end;t[side]=value;t.style='line';this.changed();
++                },
++            });
++            row.bind(control.el);
++            return {side,control};
++        });
+ 
+         this.lineRow({
+             thickness: () => t.thickness,
+@@ -1711,7 +1731,10 @@ class SegmentCard extends ToolCard<SegmentTool> {
+             ],
+         });
+         this.labelField('optional, e.g. width');
+-        this.onSync(() => style.setValue(t.style));
++        this.onSync(() => {
++            style.setValue(t.style==='brace'?'brace':'line');
++            for(const {side,control} of ends){control.setValue(endpointOf(t,side));control.setDisabled(t.style==='brace'||t.closed);}
++        });
+     }
+ 
+     protected summary(): string {
+diff --git a/tests/endpoints.test.ts b/tests/endpoints.test.ts
+new file mode 100644
+index 0000000..fe0916c
+--- /dev/null
++++ b/tests/endpoints.test.ts
+@@ -0,0 +1,58 @@
++import {test} from './_lib';
++import {strict as assert} from 'node:assert';
++import {SettingsManager} from '../src/settings';
++import {computeScene2D,computeScene3D} from '../src/scene';
++import {parseChartText} from '../src/text/parse';
++import {printChartText} from '../src/text/print';
++import {canonical} from '../src/chartdata';
++
++const tools:any[]=[
++    {type:'points',name:'P1',points:'(0, 0.5)',hollow:true},
++    {type:'segment',name:'S1',path:'(-2, 0); (0, 1); (2, 0)',start:'hollow',end:'arrow'},
++];
++function settings(extra:any={}){return SettingsManager.fromJSON({v:4,tools,...extra});}
++function scene(data:any={}){
++    const s=settings(data),math=s.createMathContext();
++    return computeScene2D({math,tools:s.toRendererConfig(math).tools!,functions:[],axisStyle:'box',polar:false,view:{xmin:-5,xmax:5,ymin:-5,ymax:5},grid:{nx:40,ny:40}});
++}
++test('point and independent path endpoints survive text and JSON round trips',()=>{
++    const data=settings().serialize();
++    const text=printChartText(data);
++    const parsed=parseChartText(text);
++    assert.deepEqual(parsed.problems,[]);
++    assert.equal(canonical(parsed.data),canonical(data));
++    const restored=settings(data).serialize().tools as any[];
++    assert.equal(restored[0].hollow,true);
++    assert.equal(restored[1].start,'hollow');assert.equal(restored[1].end,'arrow');
++});
++test('a modern path decorates only its outer endpoints',()=>{
++    const s=scene();
++    const markers=s.items.flatMap(i=>i.markers);
++    assert.equal(markers.length,2);assert(markers.every(p=>p.hollow));
++    const stroke=s.items.flatMap(i=>i.strokes)[0];
++    assert.equal(stroke.lines.length,1);assert.equal(stroke.arrow,'forward');
++});
++test('legacy arrows retain per-leg heads without adding modern fields',()=>{
++    const s=scene({tools:[{type:'segment',name:'S1',path:'(0,0); (1,1); (2,0)',style:'both'}]});
++    const stroke=s.items.flatMap(i=>i.strokes)[0];
++    assert.equal(stroke.lines.length,2);assert.equal(stroke.arrow,'both');
++    const saved=settings({tools:[{type:'segment',style:'both'}]}).serialize().tools as any[];
++    assert(!('start' in saved[0])&&!('end' in saved[0]));
++});
++test('closed paths have no competing endpoint glyphs',()=>{
++    const s=scene({tools:[{...tools[1],closed:true}]});
++    assert.equal(s.items.flatMap(i=>i.markers).length,0);
++    assert.equal(s.items.flatMap(i=>i.strokes)[0].arrow,undefined);
++});
++test('3D hollow points and mixed path ends propagate into scene and TikZ',()=>{
++    const s=settings({dimension:true,tools:[{type:'points',dim:3,points:'(0,0,0)',hollow:true},{type:'segment',dim:3,path:'(0,0,0); (1,1,1); (2,1,0)',start:'arrow',end:'hollow'}]});
++    const math=s.createMathContext();const config=s.toRendererConfig(math);
++    const scene=computeScene3D({math,tools:config.tools!,view:{xmin:-5,xmax:5,ymin:-5,ymax:5,zmin:-5,zmax:5}});
++    assert.equal(scene.points.length,2);assert(scene.points.every(p=>p.hollow));
++    assert.equal(scene.segments[0].arrow,'backward');assert.equal(scene.segments[1].arrow,undefined);
++    assert(s.generateTikzCode().includes('mark options={fill=white'));
++});
++test('2D TikZ preserves filled/open marks and arrow ends',()=>{
++    const code=settings().generateTikzCode();
++    assert(code.includes('fill=white, draw='));assert(code.includes('->'));
++});

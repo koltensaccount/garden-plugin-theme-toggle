@@ -62,3 +62,19 @@ test('3D charts and Easy TikZ JSON export without an Obsidian or browser runtime
   const json=renderer.render(JSON.stringify({v:4,functions:[{expression:'sin(x)'}]}));
   assert(json.png.length>20000);
 });
+
+test('hollow points and independent path ends survive published PNG rendering',async()=>{
+  await renderer.prepare();
+  const base={v:4,tools:[{type:'points',name:'P1',points:'(1,1)'},{type:'segment',name:'S1',path:'(0,0); (3,2)'}]};
+  const styled=structuredClone(base);
+  styled.tools[0].hollow=true;
+  styled.tools[1].start='hollow';styled.tools[1].end='arrow';
+  for(const dark of [false,true]){
+    const plain=renderer.render(JSON.stringify(base),dark);
+    const ends=renderer.render(JSON.stringify(styled),dark);
+    assert(!plain.png.equals(ends.png),'Endpoint styling changes actual rendered pixels');
+    assert.equal(ends.png.readUInt32BE(16),3040);
+  }
+  const source='point (1, 1) | hollow\nline from (0, 0) to (3, 2) | start hollow, end arrow';
+  assert(renderer.render(source).png.length>20000);
+});

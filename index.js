@@ -3,7 +3,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const renderer = require('./lib/easy-tikz-renderer.cjs');
 const generated = new Map();
-const FORMAT = 'easy-tikz-4.6.0-garden-1';
+const FORMAT = 'easy-tikz-4.6.0-garden-endpoints-1';
 
 module.exports = {
   setupEleventy(config, context) {
