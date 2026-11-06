@@ -76,3 +76,9 @@ Use native folded callouts for responses:
 ```
 
 `[!answer]-` uses the same quiet disclosure style. No HTML or note rewriting is required.
+
+### Mathematical reading layout
+
+Obsidian-style display equations embedded in prose or separated by text on one line are adapted during the garden build; the original Markdown and TeX remain untouched. Long inline formulae retain their size and gain keyboard-accessible local scrolling only when the containing paragraph is too narrow. This also follows resized panes and dynamically loaded previews. Ordinary inline math keeps its native baseline.
+
+The paired Folio garden stylesheet sets a default readable measure, mobile gutters and paragraph rhythm while preserving explicit note-width and reading-spacing preferences. These browser corrections are intentionally not applied to Obsidian's native editor layout.

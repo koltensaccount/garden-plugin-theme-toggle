@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const renderer = require('./lib/easy-tikz-renderer.cjs');
+const { displayMathLayout } = require('./lib/display-math-layout.cjs');
 const generated = new Map();
 const FORMAT = 'easy-tikz-4.6.0-garden-endpoints-show-compat-1';
 
@@ -30,6 +31,7 @@ module.exports = {
     });
   },
   setupMarkdown(md, context) {
+    md.use(displayMathLayout);
     if (context.settings.renderEasyTikz === false) return;
     const original = md.renderer.rules.fence;
     const rawScale = Number(context.settings.tikzScale);
