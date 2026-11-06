@@ -40,7 +40,7 @@ test('actual garden hover preview keeps the definition title neutral', {skip: !d
   await page.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:')?route.continue():route.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}/school/fall-2026/signals-and-systems/signals-and-systems/`,{waitUntil:'networkidle'});
   await page.evaluate(()=>{document.body.classList.remove('theme-light');document.body.classList.add('theme-dark');});
-  await page.getByRole('link',{name:'Introduction',exact:true}).hover();
+  await page.locator('main.content a[href*="signals-and-systems-chapter-1"]').first().hover();
   const title=page.locator('#tooltip-content .callout-title-inner').first();await title.waitFor();
   assert.equal(await title.evaluate(e=>getComputedStyle(e).color),'rgb(223, 226, 231)');
   assert.match(await title.textContent(),/Signal/);

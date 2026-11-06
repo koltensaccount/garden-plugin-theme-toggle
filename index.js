@@ -3,7 +3,17 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const renderer = require('./lib/easy-tikz-renderer.cjs');
 const generated = new Map();
-const FORMAT = 'easy-tikz-4.6.0-garden-endpoints-1';
+const FORMAT = 'easy-tikz-4.6.0-garden-endpoints-show-compat-1';
+
+// Older editor-generated blocks can contain a bare `show` before the real
+// viewport directive. It carries no ranges; preserve the explicit bounds and
+// reject bare show everywhere else rather than hiding actual chart errors.
+function chartSourceForExport(source) {
+  const lines = source.split(/\r?\n/);
+  const bounds = lines.findIndex(line => /^\s*show\s+[xyz]\s+from\s+/i.test(line));
+  if (bounds < 0) return source;
+  return lines.filter((line, index) => !(index < bounds && /^\s*show\s*$/i.test(line))).join('\n');
+}
 
 module.exports = {
   setupEleventy(config, context) {
@@ -30,6 +40,7 @@ module.exports = {
       if (language !== 'easy-tikz' && !(language === 'tikz' && token.content.trim().startsWith('{'))) {
         return original(tokens,index,options,env,self);
       }
+      const chartSource = chartSourceForExport(token.content);
       const key = crypto.createHash('sha256').update(JSON.stringify([FORMAT,scale,token.content])).digest('hex');
       const cache = path.resolve('.cache','dg-appearance-tikz');
       fs.mkdirSync(cache,{recursive:true});
@@ -50,7 +61,7 @@ module.exports = {
         }
         if (!dimensions) {
           try {
-            const result=renderer.render(token.content,mode==='dark',scale);
+            const result=renderer.render(chartSource,mode==='dark',scale);
             dimensions={width:result.width,height:result.height,pngHash:crypto.createHash('sha256').update(result.png).digest('hex')};
             // Rename completed writes so an interrupted build cannot cache a partial image.
             fs.writeFileSync(file+'.tmp',result.png); fs.renameSync(file+'.tmp',file);

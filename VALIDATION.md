@@ -55,3 +55,7 @@ The garden adapter explicitly applies Folio's callout-title color to both title 
 ### Hover preview title colors
 
 Color integration checks now cover callouts outside `main.content`, including the actual `#tooltip-content` wrapper and independent panes. A real local garden page was opened and its Introduction link hovered; the copied definition title was verified as Folio's off-white in dark mode. The same color matrix verifies plain and linked titles across all three locations in light/dark modes.
+
+### Legacy graph viewport directive
+
+Version 1.5.1 accepts the editor-generated redundant bare `show` directive only when it occurs before a later explicit viewport directive. The exporter retains the explicit bounds, leaves source notes untouched, and still rejects bare `show` without bounds or after the viewport. The graph cache version changes to invalidate old output.

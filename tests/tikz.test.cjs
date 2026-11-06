@@ -78,3 +78,15 @@ test('hollow points and independent path ends survive published PNG rendering',a
   const source='point (1, 1) | hollow\nline from (0, 0) to (3, 2) | start hollow, end arrow';
   assert(renderer.render(source).png.length>20000);
 });
+
+test('editor-generated redundant show before explicit bounds exports without changing the note', async()=>{
+  await renderer.prepare();
+  const source='show\n'+chart;
+  const note='```easy-tikz\n'+source+'\n```';
+  const before=note;
+  const md=new MarkdownIt();hooks.setupMarkdown(md,{settings:{}});
+  assert.match(md.render(note),/dg-tikz-graph/);
+  assert.equal(note,before);
+  assert.throws(()=>md.render('```easy-tikz\nshow\n```'),/show takes ranges/,'A bare show without explicit bounds still fails');
+  assert.throws(()=>md.render('```easy-tikz\n'+chart+'\nshow\n```'),/show takes ranges/,'Only the redundant directive preceding explicit bounds is ignored');
+});
